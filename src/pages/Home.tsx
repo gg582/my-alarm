@@ -8,13 +8,14 @@ import { Slava5671AudioEngine } from '../audio/audioEngine';
 import type { WorkerInMessage, WorkerOutMessage } from '../sim/physics.worker';
 import type { SimSnapshot } from '../sim/physics';
 import { SPEC } from '../sim/specs';
+import { I18N, type Lang } from '../i18n';
 import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
 import { Switch } from '@/components/ui/switch';
 import {
   Volume2, VolumeX, Play, Pause, StepForward,
   Bell, Compass, Maximize2, ChevronDown,
-  Clock, Gauge, Zap, Sparkles
+  Clock, Gauge, Zap, Sparkles, Globe
 } from 'lucide-react';
 
 function fmtTime(min: number) {
@@ -43,6 +44,17 @@ export default function Home() {
   const rendererRef = useRef<Slava5671Renderer | null>(null);
   const audioRef = useRef<Slava5671AudioEngine | null>(null);
   const snapRef = useRef<SimSnapshot | null>(null);
+
+  // i18n
+  const [lang, setLang] = useState<Lang>(() => {
+    return (localStorage.getItem('slava_lang') as Lang) || 'ko';
+  });
+  const t = I18N[lang];
+
+  const changeLang = (l: Lang) => {
+    setLang(l);
+    localStorage.setItem('slava_lang', l);
+  };
 
   const [gpuError, setGpuError] = useState<string | null>(null);
   const [audioOn, setAudioOn] = useState(false);
@@ -227,9 +239,9 @@ export default function Home() {
     const diff = (hud.alarmMinutes - (hud.timeMinutes % 720) + 720) % 720;
     const hours = Math.floor(diff / 60);
     const mins = Math.floor(diff % 60);
-    if (hours === 0 && mins === 0) return '지금 울림!';
-    if (hours === 0) return `${mins}분 남음`;
-    return `${hours}시간 ${mins}분 남음`;
+    if (hours === 0 && mins === 0) return t.ringingNow;
+    if (hours === 0) return t.minsLeft(mins);
+    return t.hoursMinsLeft(hours, mins);
   };
 
   const timeFrac = hud.timeTurns / SPEC.timeBarrel.fullTurns;
@@ -243,9 +255,9 @@ export default function Home() {
       {gpuError && (
         <div className="absolute inset-0 z-50 flex items-center justify-center bg-[#0b0d12]/90 p-4 backdrop-blur">
           <div className="max-w-md rounded-xl border border-red-800 bg-red-950/80 p-6 text-sm text-red-100 shadow-2xl">
-            <h2 className="text-base font-bold text-red-300 mb-2">WebGPU 초기화 오류</h2>
+            <h2 className="text-base font-bold text-red-300 mb-2">WebGPU Error</h2>
             <p>{gpuError}</p>
-            <p className="mt-3 text-xs text-neutral-400">Chrome, Edge 또는 WebGPU 지원 브라우저를 사용해주세요.</p>
+            <p className="mt-3 text-xs text-neutral-400">Chrome, Edge or WebGPU-enabled browser required.</p>
           </div>
         </div>
       )}
@@ -260,12 +272,33 @@ export default function Home() {
             </h1>
           </div>
           <p className="hidden sm:block text-[11px] text-neutral-400 mt-0.5">
-            2nd Moscow Watch Factory · 56 mm · {SPEC.jewels} Jewels · {SPEC.beatsPerSecond * 3600} vph · 4-Hand 기계식 무브먼트 (시/분/초/알람)
+            {t.subtitle(SPEC.jewels)}
           </p>
         </div>
 
-        {/* Live Clock & Alarm Status Pill */}
-        <div className="pointer-events-auto flex items-center gap-2">
+        {/* Live Clock, Language Toggle, Audio & Controls */}
+        <div className="pointer-events-auto flex items-center gap-1.5 sm:gap-2">
+          {/* Language Switcher Button */}
+          <div className="flex items-center gap-1 rounded-lg border border-neutral-700/60 bg-neutral-900/80 p-0.5 px-1 text-xs font-semibold">
+            <Globe className="size-3 text-neutral-400 ml-0.5" />
+            <button
+              onClick={() => changeLang('ko')}
+              className={`px-1.5 py-0.5 rounded transition text-[11px] ${
+                lang === 'ko' ? 'bg-amber-500/30 text-amber-200 font-bold' : 'text-neutral-400 hover:text-neutral-200'
+              }`}
+            >
+              KO
+            </button>
+            <button
+              onClick={() => changeLang('en')}
+              className={`px-1.5 py-0.5 rounded transition text-[11px] ${
+                lang === 'en' ? 'bg-amber-500/30 text-amber-200 font-bold' : 'text-neutral-400 hover:text-neutral-200'
+              }`}
+            >
+              EN
+            </button>
+          </div>
+
           <div
             className={`flex items-center gap-2 rounded-lg px-2.5 sm:px-3 py-1 font-mono text-sm sm:text-base tabular-nums border transition-all ${
               hud.ringing
@@ -277,7 +310,7 @@ export default function Home() {
             <span>{hud.time}</span>
             {hud.ringing && (
               <span className="flex items-center gap-1 text-[10px] sm:text-xs font-bold text-red-300 bg-red-800/60 px-1.5 py-0.5 rounded">
-                <Bell className="size-3 animate-bounce" /> 알람 울림!
+                <Bell className="size-3 animate-bounce" /> {t.alarmRinging}
               </span>
             )}
           </div>
@@ -292,7 +325,7 @@ export default function Home() {
               setVolume(newVol);
               audioRef.current?.setVolume(newVol);
             }}
-            title={audioOn ? (volume > 0 ? '소리 끄기' : '소리 켜기') : '사운드 활성화'}
+            title={audioOn ? (volume > 0 ? t.mute : t.unmute) : t.enableAudio}
           >
             {!audioOn || volume === 0 ? <VolumeX className="size-4" /> : <Volume2 className="size-4" />}
           </Button>
@@ -303,7 +336,7 @@ export default function Home() {
             variant="outline"
             className="hidden md:flex size-9 rounded-lg border-neutral-700/60 bg-neutral-900/80 text-neutral-300 hover:text-white"
             onClick={() => setDesktopPanelCollapsed(!desktopPanelCollapsed)}
-            title={desktopPanelCollapsed ? '패널 펼치기' : '패널 접기'}
+            title={desktopPanelCollapsed ? t.expandPanel : t.collapsePanel}
           >
             <Maximize2 className="size-4" />
           </Button>
@@ -314,7 +347,7 @@ export default function Home() {
       {hud.ringing && (
         <div className="absolute top-16 left-1/2 -translate-x-1/2 z-30 flex items-center gap-3 rounded-full border border-red-500 bg-red-950/90 px-4 py-2 text-xs sm:text-sm text-red-100 shadow-xl backdrop-blur animate-pulse">
           <Bell className="size-4 animate-bounce text-red-400" />
-          <span className="font-semibold">기계식 알람이 울리고 있습니다!</span>
+          <span className="font-semibold">{t.alarmRingingAlert}</span>
           <Button
             size="sm"
             className="h-7 bg-red-600 hover:bg-red-500 text-white text-xs px-3 rounded-full"
@@ -323,7 +356,7 @@ export default function Home() {
               send({ cmd: 'alarmEnabled', on: false });
             }}
           >
-            알람 끄기
+            {t.turnOffAlarm}
           </Button>
         </div>
       )}
@@ -335,27 +368,27 @@ export default function Home() {
           className={`px-2 py-1 rounded transition flex items-center gap-1 text-[11px] ${
             currentCameraView === 'default' ? 'bg-amber-500/20 text-amber-300 font-semibold' : 'text-neutral-300 hover:text-white hover:bg-neutral-800'
           }`}
-          title="3D 무브먼트 투시 시점"
+          title={t.view3D}
         >
-          <Compass className="size-3 text-amber-400" /> 3D 각도
+          <Compass className="size-3 text-amber-400" /> {t.view3D}
         </button>
         <button
           onClick={() => setCameraPreset('demo')}
           className={`px-2 py-1 rounded transition flex items-center gap-1 text-[11px] ${
             currentCameraView === 'demo' ? 'bg-sky-500/20 text-sky-300 font-semibold' : 'text-neutral-300 hover:text-white hover:bg-neutral-800'
           }`}
-          title="완성 시계 데모 뷰 (다이얼 & 4침 정면)"
+          title={t.viewDemo}
         >
-          <Sparkles className="size-3 text-sky-400" /> 데모 (다이얼&4침)
+          <Sparkles className="size-3 text-sky-400" /> {t.viewDemo}
         </button>
         <button
           onClick={() => setCameraPreset('escapement')}
           className={`px-2 py-1 rounded transition flex items-center gap-1 text-[11px] ${
             currentCameraView === 'escapement' ? 'bg-emerald-500/20 text-emerald-300 font-semibold' : 'text-neutral-300 hover:text-white hover:bg-neutral-800'
           }`}
-          title="탈진기 확대 시점"
+          title={t.viewEscapement}
         >
-          <Zap className="size-3 text-emerald-400" /> 탈진기
+          <Zap className="size-3 text-emerald-400" /> {t.viewEscapement}
         </button>
       </div>
 
@@ -365,22 +398,22 @@ export default function Home() {
         <div className="absolute bottom-4 left-4 z-10 w-80 space-y-3 rounded-2xl border border-neutral-800/90 bg-neutral-950/85 p-4 backdrop-blur shadow-2xl">
           <div className="flex items-center justify-between border-b border-neutral-800/80 pb-2">
             <h2 className="text-xs font-semibold uppercase tracking-wider text-amber-400 flex items-center gap-1.5">
-              <Gauge className="size-3.5" /> 무브먼트 조작 & 태엽
+              <Gauge className="size-3.5" /> {t.movementTitle}
             </h2>
             <span className="text-[10px] text-neutral-400 font-mono">
-              {hud.running ? '동작 중' : '태엽 풀림'}
+              {hud.running ? t.running : t.unwound}
             </span>
           </div>
 
           {/* Sound volume slider */}
           {!audioOn ? (
             <Button className="w-full bg-amber-700 hover:bg-amber-600 text-xs h-8" onClick={enableAudio}>
-              <Volume2 className="size-3.5 mr-1.5" /> 사운드 활성화 (벨 & 틱 합성음)
+              <Volume2 className="size-3.5 mr-1.5" /> {t.enableAudioBtn}
             </Button>
           ) : (
             <div className="flex items-center gap-2 text-xs bg-neutral-900/60 p-2 rounded-lg border border-neutral-800">
               <Volume2 className="size-3.5 text-neutral-400 shrink-0" />
-              <span className="w-8 text-[11px] text-neutral-400">볼륨</span>
+              <span className="w-10 text-[11px] text-neutral-400">{t.volume}</span>
               <Slider
                 value={[volume * 100]}
                 max={100}
@@ -398,7 +431,7 @@ export default function Home() {
           <div className="space-y-2">
             <div>
               <div className="flex justify-between text-[11px] mb-1">
-                <span className="text-amber-400 font-medium">시간 태엽 (Mainspring)</span>
+                <span className="text-amber-400 font-medium">{t.timeMainspring}</span>
                 <span className="font-mono text-neutral-300">{hud.timeTurns.toFixed(1)} / {SPEC.timeBarrel.fullTurns}t</span>
               </div>
               <div className="h-2 w-full rounded-full bg-neutral-800 overflow-hidden">
@@ -413,32 +446,32 @@ export default function Home() {
                   onPointerUp={stopWind}
                   onPointerLeave={stopWind}
                 >
-                  누르고 있어 감기
+                  {t.holdToWind}
                 </Button>
                 <Button
                   size="sm"
                   variant="outline"
                   className="text-[11px] h-7 px-2 border-neutral-700 hover:bg-neutral-800"
                   onClick={() => quickWind('time', 1.0)}
-                  title="+1바퀴 감기"
+                  title="+1 turn"
                 >
-                  +1바퀴
+                  {t.plus1Turn}
                 </Button>
                 <Button
                   size="sm"
                   variant="outline"
                   className="text-[11px] h-7 px-2 border-neutral-700 hover:bg-neutral-800 text-amber-400"
                   onClick={() => quickWind('time', SPEC.timeBarrel.fullTurns)}
-                  title="완전 감기"
+                  title="Full wind"
                 >
-                  완충
+                  {t.fullWind}
                 </Button>
               </div>
             </div>
 
             <div>
               <div className="flex justify-between text-[11px] mb-1">
-                <span className="text-sky-400 font-medium">알람 태엽 (Alarm Spring)</span>
+                <span className="text-sky-400 font-medium">{t.alarmSpring}</span>
                 <span className="font-mono text-neutral-300">{hud.alarmTurns.toFixed(2)} / {SPEC.alarmBarrel.fullTurns}t</span>
               </div>
               <div className="h-2 w-full rounded-full bg-neutral-800 overflow-hidden">
@@ -453,25 +486,25 @@ export default function Home() {
                   onPointerUp={stopWind}
                   onPointerLeave={stopWind}
                 >
-                  누르고 있어 감기
+                  {t.holdToWind}
                 </Button>
                 <Button
                   size="sm"
                   variant="outline"
                   className="text-[11px] h-7 px-2 border-neutral-700 hover:bg-neutral-800"
                   onClick={() => quickWind('alarm', 0.5)}
-                  title="+0.5바퀴 감기"
+                  title="+0.5 turn"
                 >
-                  +½바퀴
+                  {t.plusHalfTurn}
                 </Button>
                 <Button
                   size="sm"
                   variant="outline"
                   className="text-[11px] h-7 px-2 border-neutral-700 hover:bg-neutral-800 text-sky-400"
                   onClick={() => quickWind('alarm', SPEC.alarmBarrel.fullTurns)}
-                  title="완전 감기"
+                  title="Full wind"
                 >
-                  완충
+                  {t.fullWind}
                 </Button>
               </div>
             </div>
@@ -491,7 +524,7 @@ export default function Home() {
                 }}
               >
                 {paused ? <Play className="size-3 mr-1" /> : <Pause className="size-3 mr-1" />}
-                {paused ? '재개' : '일시정지'}
+                {paused ? t.resume : t.pause}
               </Button>
               <Button
                 size="sm"
@@ -500,12 +533,12 @@ export default function Home() {
                 onClick={() => send({ cmd: 'step' })}
                 disabled={!paused}
               >
-                <StepForward className="size-3 mr-1" /> ½ 진동 전진
+                <StepForward className="size-3 mr-1" /> {t.halfStep}
               </Button>
             </div>
 
             <div className="flex items-center gap-2 text-xs">
-              <span className="w-12 text-neutral-400 text-[11px]">배속</span>
+              <span className="w-12 text-neutral-400 text-[11px]">{t.speed}</span>
               <Slider
                 value={[speed]}
                 min={1}
@@ -525,10 +558,10 @@ export default function Home() {
         <div className="absolute bottom-4 right-4 z-10 w-96 space-y-3 rounded-2xl border border-neutral-800/90 bg-neutral-950/85 p-4 backdrop-blur shadow-2xl">
           <div className="flex items-center justify-between border-b border-neutral-800/80 pb-2">
             <h2 className="text-xs font-semibold uppercase tracking-wider text-sky-400 flex items-center gap-1.5">
-              <Bell className="size-3.5" /> 알람 시간 조정 & 다이얼
+              <Bell className="size-3.5" /> {t.alarmTitle}
             </h2>
             <div className="flex items-center gap-2 text-xs">
-              <span className="text-[11px] text-neutral-400">알람 활성</span>
+              <span className="text-[11px] text-neutral-400">{t.alarmActive}</span>
               <Switch
                 checked={alarmOn}
                 onCheckedChange={(on) => {
@@ -542,6 +575,7 @@ export default function Home() {
           {/* Interactive Dial + Time Readouts */}
           <div className="flex items-center gap-4 bg-neutral-900/60 p-3 rounded-xl border border-neutral-800/90">
             <InteractiveDial
+              lang={lang}
               snapRef={snapRef}
               dragTarget={dragTarget}
               onDragMinutes={(min) => {
@@ -551,17 +585,17 @@ export default function Home() {
             />
             <div className="flex-1 space-y-1.5 text-xs">
               <div className="flex items-center justify-between">
-                <span className="text-neutral-400 text-[11px]">현재 시각:</span>
+                <span className="text-neutral-400 text-[11px]">{t.currentTime}</span>
                 <span className="font-mono font-bold text-amber-300 text-sm">{hud.time}</span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-neutral-400 text-[11px]">설정 알람:</span>
+                <span className="text-neutral-400 text-[11px]">{t.alarmSet}</span>
                 <span className="font-mono font-bold text-sky-300 text-sm">{hud.alarm}</span>
               </div>
               <div className="flex items-center justify-between border-t border-neutral-800 pt-1 text-[11px]">
-                <span className="text-neutral-400">알람까지:</span>
+                <span className="text-neutral-400">{t.timeToAlarm}</span>
                 <span className={`font-mono ${alarmOn ? 'text-emerald-400' : 'text-neutral-500'}`}>
-                  {alarmOn ? diffUntilAlarm() : '비활성화됨'}
+                  {alarmOn ? diffUntilAlarm() : t.alarmDisabled}
                 </span>
               </div>
               <div className="flex gap-1 pt-1">
@@ -573,7 +607,7 @@ export default function Home() {
                       : 'border-neutral-800 bg-neutral-900 text-neutral-400 hover:text-neutral-200'
                   }`}
                 >
-                  알람침 드래그
+                  {t.dragAlarmHand}
                 </button>
                 <button
                   onClick={() => setDragTarget('time')}
@@ -583,7 +617,7 @@ export default function Home() {
                       : 'border-neutral-800 bg-neutral-900 text-neutral-400 hover:text-neutral-200'
                   }`}
                 >
-                  시계침 드래그
+                  {t.dragTimeHand}
                 </button>
               </div>
             </div>
@@ -592,8 +626,8 @@ export default function Home() {
           {/* Alarm Steppers & Quick Adjustment */}
           <div className="space-y-2">
             <div className="flex items-center justify-between text-[11px]">
-              <span className="text-sky-300 font-medium">알람 시간 미세/빠른 조정</span>
-              <span className="text-neutral-400">다이얼 터치 또는 버튼 클릭</span>
+              <span className="text-sky-300 font-medium">{t.adjustTitle}</span>
+              <span className="text-neutral-400">{t.adjustSubtitle}</span>
             </div>
 
             {/* Stepper Buttons */}
@@ -626,7 +660,7 @@ export default function Home() {
                 className="flex-1 text-[10px] h-6 px-1 bg-neutral-900 hover:bg-sky-950 border border-neutral-800"
                 onClick={() => setAlarmRelativeToNow(5)}
               >
-                +5분 뒤
+                {t.later5m}
               </Button>
               <Button
                 size="sm"
@@ -634,7 +668,7 @@ export default function Home() {
                 className="flex-1 text-[10px] h-6 px-1 bg-neutral-900 hover:bg-sky-950 border border-neutral-800"
                 onClick={() => setAlarmRelativeToNow(15)}
               >
-                +15분 뒤
+                {t.later15m}
               </Button>
               <Button
                 size="sm"
@@ -642,7 +676,7 @@ export default function Home() {
                 className="flex-1 text-[10px] h-6 px-1 bg-neutral-900 hover:bg-sky-950 border border-neutral-800"
                 onClick={() => setAlarmRelativeToNow(30)}
               >
-                +30분 뒤
+                {t.later30m}
               </Button>
               <Button
                 size="sm"
@@ -650,14 +684,14 @@ export default function Home() {
                 className="flex-1 text-[10px] h-6 px-1 bg-neutral-900 hover:bg-sky-950 border border-neutral-800"
                 onClick={() => setAlarmRelativeToNow(60)}
               >
-                +1시간 뒤
+                {t.later1h}
               </Button>
             </div>
 
             {/* Continuous Alarm Slider (00:00 to 12:00 in 1-min increments) */}
             <div className="space-y-1 bg-neutral-900/60 p-2 rounded-lg border border-neutral-800">
               <div className="flex justify-between text-[10px] text-neutral-400">
-                <span>슬라이더로 알람 설정</span>
+                <span>{t.sliderAlarm}</span>
                 <span className="font-mono text-sky-300">{fmtHM(alarmMinutes)}</span>
               </div>
               <Slider
@@ -681,7 +715,7 @@ export default function Home() {
                 />
               </div>
               <Button size="sm" variant="outline" className="h-7 text-xs border-neutral-700" onClick={applyAlarmInput}>
-                알람 적용
+                {t.applyAlarm}
               </Button>
             </div>
 
@@ -697,16 +731,16 @@ export default function Home() {
               </div>
               <div className="flex gap-1">
                 <Button size="sm" variant="outline" className="h-7 text-xs border-neutral-700" onClick={applyTimeInput}>
-                  시간 적용
+                  {t.applyTime}
                 </Button>
                 <Button
                   size="sm"
                   variant="outline"
                   className="h-7 text-[10px] px-2 border-neutral-700 text-neutral-400 hover:text-amber-300"
                   onClick={syncClockToRealTime}
-                  title="현재 실제 시간으로 맞춤"
+                  title="Sync with real time"
                 >
-                  현재시각
+                  {t.nowTime}
                 </Button>
               </div>
             </div>
@@ -714,9 +748,9 @@ export default function Home() {
 
           {/* Quick specs badge */}
           <div className="border-t border-neutral-800 pt-2 text-[10px] text-neutral-400 flex items-center justify-between">
-            <span>진동각: <b className="text-amber-300 font-mono">{hud.amp.toFixed(0)}°</b></span>
-            <span>비트: <b className="text-amber-300 font-mono">{hud.beats}</b></span>
-            <span>탈진비: <b className="text-neutral-300 font-mono">600:1</b></span>
+            <span>{t.amplitude} <b className="text-amber-300 font-mono">{hud.amp.toFixed(0)}°</b></span>
+            <span>{t.beats} <b className="text-amber-300 font-mono">{hud.beats}</b></span>
+            <span>{t.ratio} <b className="text-neutral-300 font-mono">600:1</b></span>
           </div>
         </div>
       </div>
@@ -726,7 +760,7 @@ export default function Home() {
         {/* Expanded Sheet Modal */}
         {mobileSheetOpen && (
           <div className="max-h-[75vh] overflow-y-auto rounded-t-3xl border-t border-neutral-700 bg-neutral-950/95 p-4 pb-6 backdrop-blur shadow-2xl space-y-4 animate-in slide-in-from-bottom duration-200">
-            {/* Sheet Handle */}
+            {/* Sheet Handle & Tabs */}
             <div className="flex items-center justify-between border-b border-neutral-800 pb-2">
               <div className="flex items-center gap-2">
                 <div className="flex rounded-lg bg-neutral-900 p-0.5 border border-neutral-800">
@@ -736,7 +770,7 @@ export default function Home() {
                       activeTab === 'alarm' ? 'bg-sky-600 text-white' : 'text-neutral-400'
                     }`}
                   >
-                    ⏰ 알람 조정
+                    {t.tabAlarm}
                   </button>
                   <button
                     onClick={() => setActiveTab('movement')}
@@ -744,7 +778,7 @@ export default function Home() {
                       activeTab === 'movement' ? 'bg-amber-600 text-white' : 'text-neutral-400'
                     }`}
                   >
-                    🌀 태엽/동작
+                    {t.tabMovement}
                   </button>
                   <button
                     onClick={() => setActiveTab('specs')}
@@ -752,7 +786,7 @@ export default function Home() {
                       activeTab === 'specs' ? 'bg-neutral-700 text-white' : 'text-neutral-400'
                     }`}
                   >
-                    ℹ️ 스펙
+                    {t.tabSpecs}
                   </button>
                 </div>
               </div>
@@ -770,6 +804,7 @@ export default function Home() {
                 {/* Dial + Readout */}
                 <div className="flex items-center gap-3 bg-neutral-900/80 p-3 rounded-xl border border-neutral-800">
                   <InteractiveDial
+                    lang={lang}
                     size={85}
                     snapRef={snapRef}
                     dragTarget={dragTarget}
@@ -780,15 +815,15 @@ export default function Home() {
                   />
                   <div className="flex-1 space-y-1">
                     <div className="flex justify-between items-center">
-                      <span className="text-neutral-400 text-[11px]">알람 시각</span>
+                      <span className="text-neutral-400 text-[11px]">{t.alarmTimeLabel}</span>
                       <span className="font-mono font-bold text-sky-300 text-base">{hud.alarm}</span>
                     </div>
                     <div className="flex justify-between items-center">
-                      <span className="text-neutral-400 text-[11px]">현재 시각</span>
+                      <span className="text-neutral-400 text-[11px]">{t.currentTimeLabel}</span>
                       <span className="font-mono text-amber-300">{hud.time}</span>
                     </div>
                     <div className="flex justify-between items-center border-t border-neutral-800 pt-1">
-                      <span className="text-neutral-400 text-[10px]">알람 작동</span>
+                      <span className="text-neutral-400 text-[10px]">{t.alarmActiveLabel}</span>
                       <Switch
                         checked={alarmOn}
                         onCheckedChange={(on) => {
@@ -804,7 +839,7 @@ export default function Home() {
                           dragTarget === 'alarm' ? 'bg-sky-900/60 border-sky-500 text-sky-200' : 'border-neutral-800 bg-neutral-900 text-neutral-400'
                         }`}
                       >
-                        알람침 드래그
+                        {t.dragAlarmHand}
                       </button>
                       <button
                         onClick={() => setDragTarget('time')}
@@ -812,7 +847,7 @@ export default function Home() {
                           dragTarget === 'time' ? 'bg-amber-900/60 border-amber-500 text-amber-200' : 'border-neutral-800 bg-neutral-900 text-neutral-400'
                         }`}
                       >
-                        시계침 드래그
+                        {t.dragTimeHand}
                       </button>
                     </div>
                   </div>
@@ -820,7 +855,7 @@ export default function Home() {
 
                 {/* Alarm Step Buttons */}
                 <div>
-                  <div className="text-[11px] text-sky-300 font-medium mb-1.5">알람 시간 빠른 조정 (+/-)</div>
+                  <div className="text-[11px] text-sky-300 font-medium mb-1.5">{t.adjustTitle}</div>
                   <div className="grid grid-cols-6 gap-1">
                     <Button size="sm" variant="outline" className="h-8 text-xs p-0 border-neutral-800 bg-neutral-900 active:scale-95" onClick={() => adjustAlarmBy(-60)}>
                       -1h
@@ -851,7 +886,7 @@ export default function Home() {
                     className="text-[10px] h-7 bg-neutral-900 border border-neutral-800"
                     onClick={() => setAlarmRelativeToNow(5)}
                   >
-                    +5분 뒤
+                    {t.later5m}
                   </Button>
                   <Button
                     size="sm"
@@ -859,7 +894,7 @@ export default function Home() {
                     className="text-[10px] h-7 bg-neutral-900 border border-neutral-800"
                     onClick={() => setAlarmRelativeToNow(15)}
                   >
-                    +15분 뒤
+                    {t.later15m}
                   </Button>
                   <Button
                     size="sm"
@@ -867,7 +902,7 @@ export default function Home() {
                     className="text-[10px] h-7 bg-neutral-900 border border-neutral-800"
                     onClick={() => setAlarmRelativeToNow(30)}
                   >
-                    +30분 뒤
+                    {t.later30m}
                   </Button>
                   <Button
                     size="sm"
@@ -875,14 +910,14 @@ export default function Home() {
                     className="text-[10px] h-7 bg-neutral-900 border border-neutral-800"
                     onClick={() => setAlarmRelativeToNow(60)}
                   >
-                    +1시간 뒤
+                    {t.later1h}
                   </Button>
                 </div>
 
                 {/* Slider */}
                 <div className="space-y-1 bg-neutral-900/80 p-2.5 rounded-xl border border-neutral-800">
                   <div className="flex justify-between text-[11px] text-neutral-400">
-                    <span>슬라이더 알람 지정</span>
+                    <span>{t.sliderAlarmLabel}</span>
                     <span className="font-mono text-sky-300 font-bold">{fmtHM(alarmMinutes)}</span>
                   </div>
                   <Slider
@@ -904,7 +939,7 @@ export default function Home() {
                       className="w-full rounded border border-neutral-700 bg-neutral-900 px-2 py-1 font-mono text-xs text-sky-300"
                     />
                     <Button size="sm" variant="outline" className="h-7 text-[11px] px-2" onClick={applyAlarmInput}>
-                      알람
+                      {t.applyAlarm}
                     </Button>
                   </div>
                   <div className="flex gap-1">
@@ -915,7 +950,7 @@ export default function Home() {
                       className="w-full rounded border border-neutral-700 bg-neutral-900 px-2 py-1 font-mono text-xs text-amber-300"
                     />
                     <Button size="sm" variant="outline" className="h-7 text-[11px] px-2" onClick={applyTimeInput}>
-                      시간
+                      {t.applyTime}
                     </Button>
                   </div>
                 </div>
@@ -928,7 +963,7 @@ export default function Home() {
                 {/* Time Spring */}
                 <div className="bg-neutral-900/80 p-3 rounded-xl border border-neutral-800 space-y-2">
                   <div className="flex justify-between items-center text-[11px]">
-                    <span className="text-amber-400 font-medium">시간 메인스프링</span>
+                    <span className="text-amber-400 font-medium">{t.timeSpringLabel}</span>
                     <span className="font-mono">{hud.timeTurns.toFixed(1)} / {SPEC.timeBarrel.fullTurns}t</span>
                   </div>
                   <div className="h-2 w-full rounded-full bg-neutral-800 overflow-hidden">
@@ -943,13 +978,13 @@ export default function Home() {
                       onPointerUp={stopWind}
                       onPointerLeave={stopWind}
                     >
-                      누르고 있어 감기
+                      {t.holdToWind}
                     </Button>
                     <Button size="sm" variant="outline" className="h-8 px-3 border-neutral-700" onClick={() => quickWind('time', 1.0)}>
-                      +1바퀴
+                      {t.plus1Turn}
                     </Button>
                     <Button size="sm" variant="outline" className="h-8 px-3 border-neutral-700 text-amber-400" onClick={() => quickWind('time', SPEC.timeBarrel.fullTurns)}>
-                      완충
+                      {t.fullWind}
                     </Button>
                   </div>
                 </div>
@@ -957,7 +992,7 @@ export default function Home() {
                 {/* Alarm Spring */}
                 <div className="bg-neutral-900/80 p-3 rounded-xl border border-neutral-800 space-y-2">
                   <div className="flex justify-between items-center text-[11px]">
-                    <span className="text-sky-400 font-medium">알람 스프링</span>
+                    <span className="text-sky-400 font-medium">{t.alarmSpringLabel}</span>
                     <span className="font-mono">{hud.alarmTurns.toFixed(2)} / {SPEC.alarmBarrel.fullTurns}t</span>
                   </div>
                   <div className="h-2 w-full rounded-full bg-neutral-800 overflow-hidden">
@@ -972,13 +1007,13 @@ export default function Home() {
                       onPointerUp={stopWind}
                       onPointerLeave={stopWind}
                     >
-                      누르고 있어 감기
+                      {t.holdToWind}
                     </Button>
                     <Button size="sm" variant="outline" className="h-8 px-3 border-neutral-700" onClick={() => quickWind('alarm', 0.5)}>
-                      +½바퀴
+                      {t.plusHalfTurn}
                     </Button>
                     <Button size="sm" variant="outline" className="h-8 px-3 border-neutral-700 text-sky-400" onClick={() => quickWind('alarm', SPEC.alarmBarrel.fullTurns)}>
-                      완충
+                      {t.fullWind}
                     </Button>
                   </div>
                 </div>
@@ -997,7 +1032,7 @@ export default function Home() {
                       }}
                     >
                       {paused ? <Play className="size-3 mr-1" /> : <Pause className="size-3 mr-1" />}
-                      {paused ? '재개' : '일시정지'}
+                      {paused ? t.resume : t.pause}
                     </Button>
                     <Button
                       size="sm"
@@ -1006,11 +1041,11 @@ export default function Home() {
                       onClick={() => send({ cmd: 'step' })}
                       disabled={!paused}
                     >
-                      <StepForward className="size-3 mr-1" /> ½ 진동
+                      <StepForward className="size-3 mr-1" /> {t.halfStepMobile}
                     </Button>
                   </div>
                   <div className="flex items-center gap-2 pt-1">
-                    <span className="text-[11px] text-neutral-400">배속:</span>
+                    <span className="text-[11px] text-neutral-400">{t.speedLabel}</span>
                     <Slider
                       value={[speed]}
                       min={1}
@@ -1031,13 +1066,13 @@ export default function Home() {
             {activeTab === 'specs' && (
               <div className="space-y-2.5 text-xs text-neutral-300 bg-neutral-900/80 p-3 rounded-xl border border-neutral-800">
                 <div className="grid grid-cols-2 gap-2 font-mono text-[11px] border-b border-neutral-800 pb-2">
-                  <div>밸런스 진폭: <span className="text-amber-300">{hud.amp.toFixed(0)}°</span></div>
-                  <div>진동 횟수: <span className="text-amber-300">{hud.beats}</span></div>
-                  <div>기어열 상태: <span className={hud.running ? 'text-emerald-400' : 'text-red-400'}>{hud.running ? '동작 중' : '정지됨'}</span></div>
-                  <div>진동수: <span className="text-neutral-300">18,000 vph</span></div>
+                  <div>{t.specAmp} <span className="text-amber-300">{hud.amp.toFixed(0)}°</span></div>
+                  <div>{t.specBeats} <span className="text-amber-300">{hud.beats}</span></div>
+                  <div>{t.specTrain} <span className={hud.running ? 'text-emerald-400' : 'text-red-400'}>{hud.running ? t.running : t.unwound}</span></div>
+                  <div>{t.specVph}</div>
                 </div>
                 <p className="text-[11px] leading-relaxed text-neutral-400">
-                  <b className="text-neutral-200">Slava Caliber 5671:</b> 제2모스크바시계공장(2МЧЗ)에서 생산된 56mm 직경의 대표적인 기계식 알람 무브먼트입니다. 600:1의 센터-탈진 바퀴 기어비와 스위스 레버 탈진기, 슬리핑 브라이들 알람 배럴을 정밀 시뮬레이션합니다.
+                  <b className="text-neutral-200">{t.specDescTitle}</b> {t.specDesc}
                 </p>
               </div>
             )}
@@ -1055,7 +1090,7 @@ export default function Home() {
             onPointerUp={stopWind}
             onPointerLeave={stopWind}
           >
-            🌀 시간 감기
+            {t.windTimeBar}
           </Button>
 
           <Button
@@ -1066,7 +1101,7 @@ export default function Home() {
             onPointerUp={stopWind}
             onPointerLeave={stopWind}
           >
-            🔔 알람 감기
+            {t.windAlarmBar}
           </Button>
 
           {/* Alarm Setting Sheet Trigger */}
@@ -1079,7 +1114,7 @@ export default function Home() {
             }}
           >
             <Clock className="size-3.5 mr-1" />
-            {mobileSheetOpen ? '접기' : `알람 ${hud.alarm}`}
+            {mobileSheetOpen ? t.sheetCollapse : `${t.sheetAlarm} ${hud.alarm}`}
           </Button>
         </div>
       </div>
@@ -1089,15 +1124,17 @@ export default function Home() {
 
 /** Interactive live SVG clock dial with touch/drag angle adjustment */
 interface DialProps {
+  lang: Lang;
   snapRef: React.MutableRefObject<SimSnapshot | null>;
   size?: number;
   dragTarget?: 'alarm' | 'time';
   onDragMinutes?: (minutes: number) => void;
 }
 
-function InteractiveDial({ snapRef, size = 95, dragTarget = 'alarm', onDragMinutes }: DialProps) {
+function InteractiveDial({ lang, snapRef, size = 95, dragTarget = 'alarm', onDragMinutes }: DialProps) {
   const svgRef = useRef<SVGSVGElement>(null);
   const isDraggingRef = useRef(false);
+  const t = I18N[lang];
 
   useEffect(() => {
     let raf = 0;
@@ -1250,7 +1287,7 @@ function InteractiveDial({ snapRef, size = 95, dragTarget = 'alarm', onDragMinut
         <circle cx="50" cy="50" r="3.5" fill="#f59e0b" stroke="#92400e" strokeWidth="1" />
       </svg>
       <div className="text-[9px] text-center text-neutral-400 mt-1 font-mono">
-        {dragTarget === 'alarm' ? '🔵 알람침 조정' : '🟡 시계침 조정'}
+        {dragTarget === 'alarm' ? t.svgDragAlarm : t.svgDragTime}
       </div>
     </div>
   );

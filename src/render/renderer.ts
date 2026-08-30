@@ -15,6 +15,7 @@
 import {
   extrudeProfile, gearOutline, pinionOutline, escapeWheelOutline,
   sawWheelOutline, lathe, box, disc, hairspringVertices, hairspringIndices,
+  hourHandMesh, minuteHandMesh, secondHandMesh, alarmHandMesh, dialRingMesh,
 } from './meshes';
 import type { MeshData } from './meshes';
 import type { SimSnapshot, SimEvent } from '../sim/physics';
@@ -53,9 +54,13 @@ function m4perspective(fovY: number, aspect: number, near: number, far: number):
   m[14] = (far * near) / (near - far);
   return m;
 }
-function m4lookAt(eye: number[], target: number[], up: number[]): Mat4 {
+function m4lookAt(eye: number[], target: number[], up: number[] = [0, 0, 1]): Mat4 {
   const z = norm3(sub3(eye, target));
-  const x = norm3(cross3(up, z));
+  let upVec = up;
+  if (Math.abs(dot3(z, upVec)) > 0.95) {
+    upVec = [0, 1, 0];
+  }
+  const x = norm3(cross3(upVec, z));
   const y = cross3(z, x);
   const m = m4identity();
   m[0] = x[0]; m[1] = y[0]; m[2] = z[0];
@@ -189,6 +194,10 @@ const MAT = {
   ruby: { color: [0.55, 0.015, 0.05], metallic: 0.15, roughness: 0.06 } as Material,
   bell: { color: [0.78, 0.8, 0.84], metallic: 1, roughness: 0.22 } as Material,
   dark: { color: [0.16, 0.16, 0.18], metallic: 0.9, roughness: 0.5 } as Material,
+  red: { color: [0.88, 0.12, 0.18], metallic: 0.85, roughness: 0.25 } as Material,
+  cyan: { color: [0.06, 0.58, 0.88], metallic: 0.9, roughness: 0.22 } as Material,
+  gold: { color: [0.88, 0.72, 0.25], metallic: 0.95, roughness: 0.18 } as Material,
+  dialSilver: { color: [0.84, 0.86, 0.89], metallic: 0.5, roughness: 0.4 } as Material,
 };
 
 // ---------------- scene objects ----------------
@@ -480,6 +489,51 @@ export class Slava5671Renderer {
     // hammer fork tail engaging the saw wheel
     this.addObject(box(1.1, 7.5, 0.9), MAT.steelSatin, hamP, hamAnim, [1.3, -3.4, 3.2]);
 
+    // ---------- demonstration clock hands & dial chapter ring (central arbor) ----------
+    const handCenterP: [number, number, number] = [POS.center[0], POS.center[1], 0];
+
+    // 1. Alarm Setting Hand (сигнальная стрелка - Slava spear arrow)
+    this.addObject(alarmHandMesh(18.0, 7.0, 7.35), MAT.cyan, handCenterP,
+      (s) => [-s.alarmHandAngle, 0]);
+
+    // 2. Hour Hand (часовая стрелка - tapered vintage sword, drops axially with hour wheel)
+    this.addObject(hourHandMesh(16.5, 7.8, 8.2), MAT.steelSatin, handCenterP,
+      (s) => [-s.hourHandAngle, -s.hourWheelDrop * SPEC.hourWheelAxialDrop]);
+
+    // 3. Minute Hand (минутная стрелка - long sword hand)
+    this.addObject(minuteHandMesh(23.5, 8.6, 8.95), MAT.dark, handCenterP,
+      (s) => [-s.minuteHandAngle, 0]);
+
+    // 4. Second Hand (секундная стрелка - Soviet signature red needle with counterweight)
+    this.addObject(secondHandMesh(24.5, 6.0, 9.3, 9.55), MAT.red, handCenterP,
+      (s) => [-s.secondHandAngle, 0]);
+
+    // 5. Central Hub / Cap (колпачок стрелок)
+    this.addObject(disc(1.2, 9.1, 9.9, 24), MAT.gold, handCenterP);
+
+    // 6. Demonstration Skeleton Dial Ring (циферблат с делениями)
+    this.addObject(dialRingMesh(20.0, 26.5, 6.4, 6.8), MAT.dialSilver, handCenterP);
+
+    // 12 hour indices around the dial chapter ring
+    for (let i = 0; i < 12; i++) {
+      const a = (i / 12) * Math.PI * 2;
+      const isQuarter = i % 3 === 0;
+      const markerW = isQuarter ? 1.4 : 0.8;
+      const markerL = isQuarter ? 3.0 : 2.0;
+      this.addObject(
+        box(markerW, markerL, 0.45),
+        isQuarter ? MAT.gold : MAT.dark,
+        handCenterP,
+        () => [-a, 0],
+        [0, 23.2, 7.0]
+      );
+    }
+
+    // Dial standoffs to mainplate
+    for (const [px, py] of [[-18, -16], [18, -16], [-18, 16], [18, 16]] as const) {
+      this.addObject(disc(0.8, 1.2, 6.4, 16), MAT.brass, [POS.center[0] + px * 0.7, POS.center[1] + py * 0.7, 0]);
+    }
+
     // ---------- bridge screws (blued steel) ----------
     for (const [sx, sy] of [[-20, -20], [22, -18], [-24, 8], [10, 24]] as const) {
       this.addObject(disc(1.3, 5.6, 6.4, 20), MAT.blued, [sx, sy, 0]);
@@ -488,24 +542,79 @@ export class Slava5671Renderer {
 
   // ---------------- camera ----------------
 
+  private activePointers = new Map<number, { x: number; y: number }>();
+  private prevPinchDist = 0;
+
   private attachCameraControls() {
-    let dragging = false;
-    let lx = 0, ly = 0;
+    let lastTap = 0;
+
     this.canvas.addEventListener('pointerdown', (e) => {
-      dragging = true; lx = e.clientX; ly = e.clientY;
+      this.activePointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
       this.canvas.setPointerCapture(e.pointerId);
+
+      // double tap to reset view
+      const now = performance.now();
+      if (this.activePointers.size === 1 && now - lastTap < 300) {
+        this.setCameraView('default');
+      }
+      lastTap = now;
     });
+
     this.canvas.addEventListener('pointermove', (e) => {
-      if (!dragging) return;
-      this.yaw += (e.clientX - lx) * 0.008;
-      this.pitch = Math.max(-1.4, Math.min(1.5, this.pitch + (e.clientY - ly) * 0.008));
-      lx = e.clientX; ly = e.clientY;
+      if (!this.activePointers.has(e.pointerId)) return;
+      const prev = this.activePointers.get(e.pointerId)!;
+      this.activePointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+
+      if (this.activePointers.size === 1) {
+        const dx = e.clientX - prev.x;
+        const dy = e.clientY - prev.y;
+        this.yaw += dx * 0.008;
+        this.pitch = Math.max(-1.45, Math.min(1.45, this.pitch + dy * 0.008));
+      } else if (this.activePointers.size >= 2) {
+        const pts = Array.from(this.activePointers.values());
+        const dist = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y);
+        if (this.prevPinchDist > 0 && dist > 10) {
+          const factor = this.prevPinchDist / dist;
+          this.dist = Math.max(35, Math.min(240, this.dist * (1 + (factor - 1) * 0.8)));
+        }
+        this.prevPinchDist = dist;
+      }
     });
-    this.canvas.addEventListener('pointerup', () => { dragging = false; });
+
+    const removePointer = (e: PointerEvent) => {
+      this.activePointers.delete(e.pointerId);
+      if (this.activePointers.size < 2) {
+        this.prevPinchDist = 0;
+      }
+    };
+
+    this.canvas.addEventListener('pointerup', removePointer);
+    this.canvas.addEventListener('pointercancel', removePointer);
+
     this.canvas.addEventListener('wheel', (e) => {
       e.preventDefault();
-      this.dist = Math.max(45, Math.min(220, this.dist * (1 + e.deltaY * 0.001)));
+      this.dist = Math.max(35, Math.min(240, this.dist * (1 + e.deltaY * 0.001)));
     }, { passive: false });
+  }
+
+  setCameraView(view: 'default' | 'demo' | 'top' | 'escapement') {
+    if (view === 'default') {
+      this.yaw = 0.35;
+      this.pitch = 0.62;
+      this.dist = 105;
+      this.target = [0, 0, -1];
+    } else if (view === 'demo' || view === 'top') {
+      // Demonstration view looking at the dial face and 4 hands
+      this.yaw = 0.06;
+      this.pitch = 1.32;
+      this.dist = 78;
+      this.target = [16.6, 10.3, 4];
+    } else if (view === 'escapement') {
+      this.yaw = -0.65;
+      this.pitch = 0.45;
+      this.dist = 52;
+      this.target = [-11, 14, 2];
+    }
   }
 
   resize() {
@@ -539,9 +648,11 @@ export class Slava5671Renderer {
     const hsVerts = hairspringVertices(6.5, 1.1, 5.0, 0.4, HAIRSPRING_SEGMENTS, snap.balanceAngle, 7.4);
     this.device.queue.writeBuffer(this.hsVBuf, 0, hsVerts);
 
-    // camera
+    // camera - adjust FOV when in portrait mode so the movement remains fully visible
     const aspect = this.canvas.width / Math.max(1, this.canvas.height);
-    const proj = m4perspective((38 * Math.PI) / 180, aspect, 1, 500);
+    const baseFov = (38 * Math.PI) / 180;
+    const fovY = aspect < 1 ? 2 * Math.atan(Math.tan(baseFov / 2) / aspect) : baseFov;
+    const proj = m4perspective(fovY, aspect, 1, 500);
     const cp = Math.cos(this.pitch), sp = Math.sin(this.pitch);
     const eye = [
       this.target[0] + this.dist * cp * Math.sin(this.yaw),

@@ -49,6 +49,7 @@ export interface SimSnapshot {
 
   minuteHandAngle: number;   // rad, 0 = 12 o'clock
   hourHandAngle: number;
+  secondHandAngle: number;
   alarmHandAngle: number;
 
   timeBarrelTurns: number;
@@ -73,7 +74,7 @@ const SUB_DT = 1 / 12000; // fixed integration sub-step (s)
 
 export class Slava5671Physics {
   // ---- oscillator ----
-  private theta = 0;            // balance angle
+  private theta = 0.35;         // balance angle (starts with kick)
   private omega = 0;            // balance angular velocity
   private readonly I = SPEC.balanceInertia;
   private readonly k = SPEC.balanceInertia * Math.pow(TAU / SPEC.balancePeriod, 2);
@@ -89,12 +90,12 @@ export class Slava5671Physics {
   private readonly impulseDuration = 0.028; // s of fork contact per beat
   private readonly impulseArcHalf = 0.45;   // rad of balance rotation under impulse
   private readonly impMax = 132;            // tuned to sustain ~270° at full wind
-  private amplitudeEstimate = 0;
+  private amplitudeEstimate = 0.35;
   private lastBeatDir = 1;
 
   // ---- barrels ----
-  private timeTurns = 0;
-  private alarmTurns = 0;
+  private timeTurns = 6.0;      // pre-wound (~24h reserve) so movement runs immediately
+  private alarmTurns = 1.8;     // pre-wound alarm spring
 
   // ---- time ----
   private simTime = 0;
@@ -287,7 +288,7 @@ export class Slava5671Physics {
         if (prev < 0.985 && now >= 0.985) {
           const vel = Math.abs(Math.cos(this.hammerPhase)) * (0.5 + 0.5 * torque);
           this.events.push({ type: 'strike', value: Math.min(1, vel) });
-          this.hammerRestTimer = 0.016; // 16 ms rest on the bell
+          this.hammerRestTimer = 0.004; // 4 ms rest on the bell
           this.hammerResting = true;
         }
       }
@@ -324,8 +325,9 @@ export class Slava5671Physics {
     const third = -fourth / (SPEC.train.third.wheelTeeth / SPEC.train.fourth.pinion);
     const center = -third / (SPEC.train.center.wheelTeeth / SPEC.train.third.pinion);
     const barrel = -center / SPEC.barrelToCenterRatio;
-    const minuteHand = this.timeMinutes() / 60 * TAU;
-    const hourHand = this.timeMinutes() / 720 * TAU;
+    const minuteHand = (this.timeMinutes() / 60) * TAU;
+    const hourHand = (this.timeMinutes() / 720) * TAU;
+    const secondHand = (((this.timeMinutes() * 60) % 60) / 60) * TAU;
     const snap: SimSnapshot = {
       simTime: this.simTime,
       running: this.timeTurns > 1e-4,
@@ -343,6 +345,7 @@ export class Slava5671Physics {
       minuteWheelAngle: -(center / 3),
       minuteHandAngle: minuteHand,
       hourHandAngle: hourHand,
+      secondHandAngle: secondHand,
       alarmHandAngle: (this.alarmMin / 720) * TAU,
       timeBarrelTurns: this.timeTurns,
       timeBarrelTorque: this.timeTorque(),

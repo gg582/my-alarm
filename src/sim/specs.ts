@@ -95,7 +95,7 @@ export const SPEC = {
     slippingBridle: true,    // verified friction bridle — cannot overwind
   },
   hammerForkWheelTeeth: 21,  // saw-tooth wheel (verified "like a circular saw")
-  strikeRateHz: 7.0,         // hammer oscillation at full wind (≥20 s duration verified)
+  strikeRateHz: 25.0,        // authentic high-speed mechanical hammer flutter (25 Hz)
   alarmMinDurationSeconds: 20,
 
   // hour-wheel lug / alarm-wheel slot release (verified mechanism)

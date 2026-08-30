@@ -202,3 +202,113 @@ export function hairspringIndices(segments: number): Uint32Array<ArrayBuffer> {
   }
   return idx;
 }
+
+// ---------- authentic Slava 5671 clock hands & dial meshes ----------
+
+/** Vintage tapered sword hour hand (часовая стрелка) */
+export function hourHandMesh(length = 16.5, z0 = 0, z1 = 0.4): MeshData {
+  const pts: [number, number][] = [];
+  const bossR = 1.8;
+  const segments = 16;
+  // Circular boss around center arbor (from -120° to 120°)
+  for (let i = 0; i <= segments; i++) {
+    const a = -Math.PI * 0.65 + (i / segments) * Math.PI * 1.3;
+    pts.push([bossR * Math.sin(a), -bossR * Math.cos(a)]);
+  }
+  // Tapered sword blade toward 12 o'clock (+Y)
+  pts.push([0.9, length * 0.2]);
+  pts.push([0.7, length * 0.85]);
+  pts.push([0, length]); // tip
+  pts.push([-0.7, length * 0.85]);
+  pts.push([-0.9, length * 0.2]);
+  return extrudeProfile(pts, z0, z1);
+}
+
+/** Slender minute hand (минутная стрелка) */
+export function minuteHandMesh(length = 23.5, z0 = 0, z1 = 0.35): MeshData {
+  const pts: [number, number][] = [];
+  const bossR = 1.4;
+  const segments = 16;
+  for (let i = 0; i <= segments; i++) {
+    const a = -Math.PI * 0.7 + (i / segments) * Math.PI * 1.4;
+    pts.push([bossR * Math.sin(a), -bossR * Math.cos(a)]);
+  }
+  pts.push([0.65, length * 0.2]);
+  pts.push([0.45, length * 0.9]);
+  pts.push([0, length]); // tip
+  pts.push([-0.45, length * 0.9]);
+  pts.push([-0.65, length * 0.2]);
+  return extrudeProfile(pts, z0, z1);
+}
+
+/** Soviet signature red needle second hand with counterweight disc (секундная стрелка) */
+export function secondHandMesh(length = 24.5, tail = 6.0, z0 = 0, z1 = 0.25): MeshData {
+  const pts: [number, number][] = [];
+  const w = 0.22;
+  // needle tip
+  pts.push([0, length]);
+  pts.push([w, length * 0.2]);
+  pts.push([w, 0.8]);
+  // center boss
+  pts.push([0.75, 0]);
+  pts.push([w, -1.0]);
+  // tail counterweight disc
+  const cwY = -tail * 0.6;
+  const cwR = 1.2;
+  for (let i = 0; i <= 10; i++) {
+    const a = -Math.PI / 2 + (i / 10) * Math.PI;
+    pts.push([cwR * Math.cos(a), cwY + cwR * Math.sin(a)]);
+  }
+  pts.push([w, -tail]);
+  pts.push([-w, -tail]);
+  for (let i = 0; i <= 10; i++) {
+    const a = Math.PI / 2 + (i / 10) * Math.PI;
+    pts.push([cwR * Math.cos(a), cwY + cwR * Math.sin(a)]);
+  }
+  pts.push([-w, -1.0]);
+  pts.push([-0.75, 0]);
+  pts.push([-w, 0.8]);
+  pts.push([-w, length * 0.2]);
+  return extrudeProfile(pts, z0, z1);
+}
+
+/** Slava spear-tipped alarm hand (сигнальная стрелка) */
+export function alarmHandMesh(length = 18.0, z0 = 0, z1 = 0.35): MeshData {
+  const pts: [number, number][] = [];
+  const bossR = 1.6;
+  const segments = 14;
+  for (let i = 0; i <= segments; i++) {
+    const a = -Math.PI * 0.65 + (i / segments) * Math.PI * 1.3;
+    pts.push([bossR * Math.sin(a), -bossR * Math.cos(a)]);
+  }
+  // thin neck
+  pts.push([0.35, length * 0.65]);
+  // spear diamond head
+  pts.push([1.4, length * 0.78]);
+  pts.push([0, length]); // arrow tip
+  pts.push([-1.4, length * 0.78]);
+  pts.push([-0.35, length * 0.65]);
+  return extrudeProfile(pts, z0, z1);
+}
+
+/** Demonstration Dial Chapter Ring (циферблат с делениями) */
+export function dialRingMesh(rInner = 20.0, rOuter = 26.5, z0 = 0, z1 = 0.5): MeshData {
+  const segs = 96;
+  const verts: number[] = [];
+  const idx: number[] = [];
+  for (let i = 0; i <= segs; i++) {
+    const a = (i / segs) * Math.PI * 2;
+    const c = Math.cos(a), s = Math.sin(a);
+    const base = verts.length / 6;
+    verts.push(rOuter * c, rOuter * s, z1, 0, 0, 1);
+    verts.push(rInner * c, rInner * s, z1, 0, 0, 1);
+    verts.push(rOuter * c, rOuter * s, z0, 0, 0, -1);
+    verts.push(rInner * c, rInner * s, z0, 0, 0, -1);
+    if (i < segs) {
+      const n0 = base, n1 = base + 1, n2 = base + 4, n3 = base + 5;
+      idx.push(n0, n2, n1, n1, n2, n3);
+    }
+  }
+  return { vertices: new Float32Array(verts), indices: new Uint32Array(idx) };
+}
+

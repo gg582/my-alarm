@@ -54,25 +54,22 @@ function m4perspective(fovY: number, aspect: number, near: number, far: number):
   m[14] = (far * near) / (near - far);
   return m;
 }
-function m4lookAt(eye: number[], target: number[], up: number[] = [0, 0, 1]): Mat4 {
-  const z = norm3(sub3(eye, target));
-  let upVec = up;
-  if (Math.abs(dot3(z, upVec)) > 0.95) {
-    upVec = [0, 1, 0];
-  }
-  const x = norm3(cross3(upVec, z));
-  const y = cross3(z, x);
+function m4orbitView(eye: number[], yaw: number, pitch: number): Mat4 {
+  const cy = Math.cos(yaw), sy = Math.sin(yaw);
+  const cp = Math.cos(pitch), sp = Math.sin(pitch);
+  const x = [-cy, sy, 0];
+  const y = [-sp * sy, -sp * cy, cp];
+  const z = [cp * sy, cp * cy, sp];
   const m = m4identity();
   m[0] = x[0]; m[1] = y[0]; m[2] = z[0];
   m[4] = x[1]; m[5] = y[1]; m[6] = z[1];
   m[8] = x[2]; m[9] = y[2]; m[10] = z[2];
-  m[12] = -dot3(x, eye); m[13] = -dot3(y, eye); m[14] = -dot3(z, eye);
+  m[12] = -dot3(x, eye);
+  m[13] = -dot3(y, eye);
+  m[14] = -dot3(z, eye);
   return m;
 }
-const sub3 = (a: number[], b: number[]) => [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
-const cross3 = (a: number[], b: number[]) => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
 const dot3 = (a: number[], b: number[]) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
-const norm3 = (a: number[]) => { const l = Math.hypot(a[0], a[1], a[2]) || 1; return [a[0] / l, a[1] / l, a[2] / l]; };
 
 // ---------------- WGSL ----------------
 
@@ -239,11 +236,16 @@ export class Slava5671Renderer {
   private hsCount = 0;
   private hsObject!: SceneObject;
 
-  // camera
-  private yaw = 0.35;
-  private pitch = 0.62;
-  private dist = 105;
-  private target = [0, 0, -1];
+  // camera (target & smoothed current)
+  private targetYaw = 0.35;
+  private targetPitch = 0.62;
+  private targetDist = 105;
+  private targetLookAt = [0, 0, -1];
+
+  private currentYaw = 0.35;
+  private currentPitch = 0.62;
+  private currentDist = 105;
+  private currentLookAt = [0, 0, -1];
 
   private bellFlash = 0;
   ok = false;
@@ -568,14 +570,14 @@ export class Slava5671Renderer {
       if (this.activePointers.size === 1) {
         const dx = e.clientX - prev.x;
         const dy = e.clientY - prev.y;
-        this.yaw += dx * 0.008;
-        this.pitch = Math.max(-1.45, Math.min(1.45, this.pitch + dy * 0.008));
+        this.targetYaw -= dx * 0.006;
+        this.targetPitch = Math.max(-1.48, Math.min(1.48, this.targetPitch - dy * 0.006));
       } else if (this.activePointers.size >= 2) {
         const pts = Array.from(this.activePointers.values());
         const dist = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y);
         if (this.prevPinchDist > 0 && dist > 10) {
           const factor = this.prevPinchDist / dist;
-          this.dist = Math.max(35, Math.min(240, this.dist * (1 + (factor - 1) * 0.8)));
+          this.targetDist = Math.max(30, Math.min(240, this.targetDist * factor));
         }
         this.prevPinchDist = dist;
       }
@@ -593,27 +595,27 @@ export class Slava5671Renderer {
 
     this.canvas.addEventListener('wheel', (e) => {
       e.preventDefault();
-      this.dist = Math.max(35, Math.min(240, this.dist * (1 + e.deltaY * 0.001)));
+      this.targetDist = Math.max(30, Math.min(240, this.targetDist * Math.exp(e.deltaY * 0.0012)));
     }, { passive: false });
   }
 
   setCameraView(view: 'default' | 'demo' | 'top' | 'escapement') {
     if (view === 'default') {
-      this.yaw = 0.35;
-      this.pitch = 0.62;
-      this.dist = 105;
-      this.target = [0, 0, -1];
+      this.targetYaw = 0.35;
+      this.targetPitch = 0.62;
+      this.targetDist = 105;
+      this.targetLookAt = [0, 0, -1];
     } else if (view === 'demo' || view === 'top') {
       // Demonstration view looking at the dial face and 4 hands
-      this.yaw = 0.06;
-      this.pitch = 1.32;
-      this.dist = 78;
-      this.target = [16.6, 10.3, 4];
+      this.targetYaw = 0.0;
+      this.targetPitch = 1.35;
+      this.targetDist = 78;
+      this.targetLookAt = [16.6, 10.3, 4];
     } else if (view === 'escapement') {
-      this.yaw = -0.65;
-      this.pitch = 0.45;
-      this.dist = 52;
-      this.target = [-11, 14, 2];
+      this.targetYaw = -0.65;
+      this.targetPitch = 0.45;
+      this.targetDist = 52;
+      this.targetLookAt = [-11, 14, 2];
     }
   }
 
@@ -648,18 +650,27 @@ export class Slava5671Renderer {
     const hsVerts = hairspringVertices(6.5, 1.1, 5.0, 0.4, HAIRSPRING_SEGMENTS, snap.balanceAngle, 7.4);
     this.device.queue.writeBuffer(this.hsVBuf, 0, hsVerts);
 
+    // smooth camera interpolation
+    const lerp = 0.18;
+    this.currentYaw += (this.targetYaw - this.currentYaw) * lerp;
+    this.currentPitch += (this.targetPitch - this.currentPitch) * lerp;
+    this.currentDist += (this.targetDist - this.currentDist) * lerp;
+    this.currentLookAt[0] += (this.targetLookAt[0] - this.currentLookAt[0]) * lerp;
+    this.currentLookAt[1] += (this.targetLookAt[1] - this.currentLookAt[1]) * lerp;
+    this.currentLookAt[2] += (this.targetLookAt[2] - this.currentLookAt[2]) * lerp;
+
     // camera - adjust FOV when in portrait mode so the movement remains fully visible
     const aspect = this.canvas.width / Math.max(1, this.canvas.height);
     const baseFov = (38 * Math.PI) / 180;
     const fovY = aspect < 1 ? 2 * Math.atan(Math.tan(baseFov / 2) / aspect) : baseFov;
     const proj = m4perspective(fovY, aspect, 1, 500);
-    const cp = Math.cos(this.pitch), sp = Math.sin(this.pitch);
+    const cp = Math.cos(this.currentPitch), sp = Math.sin(this.currentPitch);
     const eye = [
-      this.target[0] + this.dist * cp * Math.sin(this.yaw),
-      this.target[1] + this.dist * cp * Math.cos(this.yaw),
-      this.target[2] + this.dist * sp,
+      this.currentLookAt[0] + this.currentDist * cp * Math.sin(this.currentYaw),
+      this.currentLookAt[1] + this.currentDist * cp * Math.cos(this.currentYaw),
+      this.currentLookAt[2] + this.currentDist * sp,
     ];
-    const view = m4lookAt(eye, this.target, [0, 0, 1]);
+    const view = m4orbitView(eye, this.currentYaw, this.currentPitch);
     const viewProj = m4mul(proj, view);
 
     const f = new Float32Array(44);

@@ -43,6 +43,92 @@ export function extrudeProfile(outline: [number, number][], z0: number, z1: numb
   return { vertices: new Float32Array(verts), indices: new Uint32Array(idx) };
 }
 
+function polygonArea(outline: [number, number][]): number {
+  let area = 0;
+  for (let i = 0; i < outline.length; i++) {
+    const [x0, y0] = outline[i];
+    const [x1, y1] = outline[(i + 1) % outline.length];
+    area += x0 * y1 - x1 * y0;
+  }
+  return area * 0.5;
+}
+
+function triangulateProfile(outline: [number, number][]): number[] {
+  const remaining = outline.map((_, i) => i);
+  const triangles: number[] = [];
+  const cross = (
+    [ax, ay]: [number, number],
+    [bx, by]: [number, number],
+    [cx, cy]: [number, number],
+  ) => (bx - ax) * (cy - ay) - (by - ay) * (cx - ax);
+  const inside = (p: [number, number], a: [number, number], b: [number, number], c: [number, number]) => {
+    const c0 = cross(a, b, p), c1 = cross(b, c, p), c2 = cross(c, a, p);
+    return c0 >= -1e-8 && c1 >= -1e-8 && c2 >= -1e-8;
+  };
+
+  while (remaining.length > 3) {
+    let clipped = false;
+    for (let i = 0; i < remaining.length; i++) {
+      const ia = remaining[(i + remaining.length - 1) % remaining.length];
+      const ib = remaining[i];
+      const ic = remaining[(i + 1) % remaining.length];
+      const a = outline[ia], b = outline[ib], c = outline[ic];
+      if (cross(a, b, c) <= 1e-8) continue;
+      if (remaining.some((index) => index !== ia && index !== ib && index !== ic && inside(outline[index], a, b, c))) continue;
+      triangles.push(ia, ib, ic);
+      remaining.splice(i, 1);
+      clipped = true;
+      break;
+    }
+    if (!clipped) throw new Error('Unable to triangulate plate profile');
+  }
+  triangles.push(remaining[0], remaining[1], remaining[2]);
+  return triangles;
+}
+
+export function plateMesh(outline: [number, number][], z0: number, z1: number): MeshData {
+  const points = polygonArea(outline) < 0 ? [...outline].reverse() : [...outline];
+  const capTriangles = triangulateProfile(points);
+  const n = points.length;
+  const vertices: number[] = [];
+  const indices: number[] = [];
+  for (let i = 0; i < n; i++) {
+    const [x0, y0] = points[i];
+    const [x1, y1] = points[(i + 1) % n];
+    const length = Math.hypot(x1 - x0, y1 - y0) || 1;
+    const nx = (y1 - y0) / length, ny = -(x1 - x0) / length;
+    const base = vertices.length / 6;
+    vertices.push(x0, y0, z0, nx, ny, 0, x1, y1, z0, nx, ny, 0, x1, y1, z1, nx, ny, 0, x0, y0, z1, nx, ny, 0);
+    indices.push(base, base + 1, base + 2, base, base + 2, base + 3);
+  }
+  const top = vertices.length / 6;
+  for (const [x, y] of points) vertices.push(x, y, z1, 0, 0, 1);
+  for (let i = 0; i < capTriangles.length; i += 3) {
+    indices.push(top + capTriangles[i], top + capTriangles[i + 1], top + capTriangles[i + 2]);
+  }
+  const bottom = vertices.length / 6;
+  for (const [x, y] of points) vertices.push(x, y, z0, 0, 0, -1);
+  for (let i = 0; i < capTriangles.length; i += 3) {
+    indices.push(bottom + capTriangles[i + 2], bottom + capTriangles[i + 1], bottom + capTriangles[i]);
+  }
+  return { vertices: new Float32Array(vertices), indices: new Uint32Array(indices) };
+}
+
+export function roundedPlateMesh(outline: [number, number][], z0: number, z1: number, iterations = 2): MeshData {
+  let points = outline;
+  for (let pass = 0; pass < iterations; pass++) {
+    const rounded: [number, number][] = [];
+    for (let i = 0; i < points.length; i++) {
+      const [x0, y0] = points[i];
+      const [x1, y1] = points[(i + 1) % points.length];
+      rounded.push([x0 * 0.75 + x1 * 0.25, y0 * 0.75 + y1 * 0.25]);
+      rounded.push([x0 * 0.25 + x1 * 0.75, y0 * 0.25 + y1 * 0.75]);
+    }
+    points = rounded;
+  }
+  return plateMesh(points, z0, z1);
+}
+
 // ---------- gear outlines ----------
 
 /** trapezoidal-tooth gear outline (brass train wheels) */
@@ -122,6 +208,29 @@ function toothedRingMesh(outline: [number, number][], innerRadius: number, z0: n
     indices.push(base, base + 1, base + 2, base, base + 2, base + 3);
   }
   return { vertices: new Float32Array(vertices), indices: new Uint32Array(indices) };
+}
+
+export function ringMesh(outerRadius: number, innerRadius: number, z0: number, z1: number, segments = 48): MeshData {
+  const outline: [number, number][] = [];
+  for (let i = 0; i < segments; i++) {
+    const angle = (i / segments) * Math.PI * 2;
+    outline.push([Math.cos(angle) * outerRadius, Math.sin(angle) * outerRadius]);
+  }
+  return toothedRingMesh(outline, innerRadius, z0, z1);
+}
+
+export function flatBarMesh(
+  x0: number, y0: number, x1: number, y1: number,
+  width0: number, width1: number, z0: number, z1: number,
+): MeshData {
+  const length = Math.hypot(x1 - x0, y1 - y0) || 1;
+  const nx = -(y1 - y0) / length, ny = (x1 - x0) / length;
+  return extrudeProfile([
+    [x0 + nx * width0 / 2, y0 + ny * width0 / 2],
+    [x1 + nx * width1 / 2, y1 + ny * width1 / 2],
+    [x1 - nx * width1 / 2, y1 - ny * width1 / 2],
+    [x0 - nx * width0 / 2, y0 - ny * width0 / 2],
+  ], z0, z1);
 }
 
 /** Open five-spoke brass wheel used in the early all-metal going train. */
@@ -286,38 +395,71 @@ export function hairspringIndices(segments: number): Uint32Array<ArrayBuffer> {
   return idx;
 }
 
-// ---------- early all-metal Slava 5671 hands & dial meshes ----------
+// ---------- early all-metal Slava 5671 machined parts ----------
 
-function flatHandMesh(length: number, width: number, tail: number, z0: number, z1: number): MeshData {
-  return extrudeProfile([
-    [-width * 0.65, -tail],
-    [width * 0.65, -tail],
-    [width * 0.65, length * 0.2],
-    [width * 0.42, length * 0.86],
-    [0, length],
-    [-width * 0.42, length * 0.86],
-    [-width * 0.65, length * 0.2],
+export function palletForkMesh(z0 = 3.0, z1 = 3.35): MeshData {
+  return mergeMeshes([
+    ringMesh(0.9, 0.3, z0, z1, 28),
+    flatBarMesh(0, 0.25, 0, 2.25, 0.75, 0.55, z0, z1),
+    flatBarMesh(0, 1.8, -1.45, 4.6, 0.58, 0.42, z0, z1),
+    flatBarMesh(0, 1.8, 1.55, 4.1, 0.58, 0.42, z0, z1),
+    flatBarMesh(0, -0.2, 3.65, -3.1, 0.68, 0.38, z0, z1),
+    flatBarMesh(3.65, -3.1, 4.75, -2.45, 0.36, 0.25, z0, z1),
+    flatBarMesh(3.65, -3.1, 4.75, -3.95, 0.36, 0.25, z0, z1),
+  ]);
+}
+
+export function palletStonesMesh(z0 = 2.9, z1 = 3.55): MeshData {
+  const stone = extrudeProfile([
+    [-0.42, -0.85], [0.34, -0.72], [0.48, 0.78], [-0.28, 0.92],
   ], z0, z1);
+  return mergeMeshes([
+    transformedMesh(stone, -0.25, -1.45, 4.6, 0),
+    transformedMesh(stone, 0.35, 1.55, 4.1, 0),
+  ]);
 }
 
-/** Flat, pointed blued-steel hour hand (часовая стрелка). */
-export function hourHandMesh(length = 16.5, z0 = 0, z1 = 0.22): MeshData {
-  return flatHandMesh(length, 1.45, 1.5, z0, z1);
+export function balanceCockMesh(z0 = 8.1, z1 = 8.65): MeshData {
+  return mergeMeshes([
+    ringMesh(2.0, 0.62, z0, z1, 40),
+    flatBarMesh(-1.1, 0.5, -6.2, 3.7, 2.6, 1.7, z0, z1),
+    flatBarMesh(0.2, -1.1, 1.0, -6.4, 2.3, 1.7, z0, z1),
+    transformedMesh(ringMesh(1.45, 0.58, z0, z1, 32), 0, -6.2, 3.7, 0),
+    transformedMesh(ringMesh(1.45, 0.58, z0, z1, 32), 0, 1.0, -6.4, 0),
+  ]);
 }
 
-/** Matching long blued-steel minute hand (минутная стрелка). */
+// ---------- early all-metal Slava 5671 hands ----------
+
+export function hourHandMesh(length = 18.0, z0 = 0, z1 = 0.22): MeshData {
+  return mergeMeshes([
+    ringMesh(1.75, 0.72, z0, z1, 40),
+    extrudeProfile([
+      [-0.55, 1.15], [0.55, 1.15], [0.46, length * 0.6],
+      [0.38, length * 0.88], [-0.18, length], [-0.5, length * 0.9],
+      [-0.46, length * 0.6],
+    ], z0, z1),
+  ]);
+}
+
 export function minuteHandMesh(length = 23.5, z0 = 0, z1 = 0.2): MeshData {
-  return flatHandMesh(length, 1.0, 1.5, z0, z1);
+  return mergeMeshes([
+    ringMesh(1.35, 0.46, z0, z1, 36),
+    extrudeProfile([
+      [-0.34, 0.9], [0.34, 0.9], [0.29, length * 0.6],
+      [0.2, length * 0.9], [0, length], [-0.2, length * 0.9],
+      [-0.29, length * 0.6],
+    ], z0, z1),
+  ]);
 }
 
-/** Plain tapered brass alarm needle, without a seconds-hand counterweight. */
 export function alarmHandMesh(length = 22.0, z0 = 0, z1 = 0.2): MeshData {
-  return extrudeProfile([
-    [-0.65, -1.3],
-    [0.65, -1.3],
-    [0.3, length * 0.55],
-    [0, length],
-    [-0.3, length * 0.55],
-  ], z0, z1);
+  return mergeMeshes([
+    ringMesh(2.05, 0.7, z0, z1 + 0.65, 40),
+    extrudeProfile([
+      [-0.42, 1.5], [0.42, 1.5], [0.2, length * 0.62],
+      [0, length], [-0.2, length * 0.62],
+    ], z0, z1),
+  ]);
 }
 

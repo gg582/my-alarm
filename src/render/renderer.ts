@@ -9,13 +9,15 @@
  *   hammer, and the stamped-steel bell (lathe).
  * · PBR: metallic-workflow Cook–Torrance (GGX/Smith/Schlick), two key lights +
  *   hemispherical ambient + environment sheen. Materials differentiate brushed brass,
- *   polished & blued steel, glossy synthetic ruby and stamped bell steel.
+ *   polished & blued steel, glossy synthetic ruby and stamped bell steel. Depth-sorted
+ *   alpha blending exposes the movement through the dial, bridges and bell cover.
  */
 
 import {
   extrudeProfile, gearOutline, pinionOutline, escapeWheelOutline,
   sawWheelOutline, lathe, box, disc, hairspringVertices, hairspringIndices,
   spokedGearMesh, hourHandMesh, minuteHandMesh, alarmHandMesh,
+  roundedPlateMesh, flatBarMesh, palletForkMesh, palletStonesMesh, balanceCockMesh,
 } from './meshes';
 import type { MeshData } from './meshes';
 import type { SimSnapshot, SimEvent } from '../sim/physics';
@@ -161,7 +163,8 @@ fn fs(v : VOut) -> @location(0) vec4<f32> {
   if (obj.flags > 0.5) {
     let uv = vec2<f32>(v.localXY.x / 53.0 + 0.5, 0.5 - v.localXY.y / 53.0);
     albedo = textureSample(objTexture, objSampler, uv).rgb;
-    return vec4<f32>(albedo, 1.0);
+    let ink = 1.0 - smoothstep(0.2, 0.72, dot(albedo, vec3<f32>(0.299, 0.587, 0.114)));
+    return vec4<f32>(albedo, max(obj.pad0, ink * 0.94));
   }
   let rough = clamp(obj.roughness, 0.05, 1.0);
 
@@ -183,7 +186,7 @@ fn fs(v : VOut) -> @location(0) vec4<f32> {
   // tonemap + gamma
   col = col / (col + vec3<f32>(1.0));
   col = pow(col, vec3<f32>(1.0 / 2.2));
-  return vec4<f32>(col, 1.0);
+  return vec4<f32>(col, obj.pad0);
 }
 `;
 
@@ -193,23 +196,24 @@ interface Material {
   color: [number, number, number];
   metallic: number;
   roughness: number;
+  opacity?: number;
 }
 
 const MAT = {
-  nickelPlate: { color: [0.66, 0.68, 0.7], metallic: 1, roughness: 0.38 } as Material,
+  nickelPlate: { color: [0.66, 0.68, 0.7], metallic: 1, roughness: 0.38, opacity: 0.26 } as Material,
   brass: { color: [0.72, 0.55, 0.24], metallic: 1, roughness: 0.3 } as Material,
   brassBright: { color: [0.8, 0.62, 0.28], metallic: 1, roughness: 0.16 } as Material,
   steel: { color: [0.72, 0.74, 0.78], metallic: 1, roughness: 0.14 } as Material,
   steelSatin: { color: [0.6, 0.62, 0.66], metallic: 1, roughness: 0.35 } as Material,
   blued: { color: [0.1, 0.18, 0.5], metallic: 1, roughness: 0.2 } as Material,
   ruby: { color: [0.55, 0.015, 0.05], metallic: 0.15, roughness: 0.06 } as Material,
-  bell: { color: [0.78, 0.8, 0.84], metallic: 1, roughness: 0.22 } as Material,
+  bell: { color: [0.78, 0.8, 0.84], metallic: 1, roughness: 0.22, opacity: 0.16 } as Material,
   dark: { color: [0.16, 0.16, 0.18], metallic: 0.9, roughness: 0.5 } as Material,
   red: { color: [0.88, 0.12, 0.18], metallic: 0.85, roughness: 0.25 } as Material,
   cyan: { color: [0.06, 0.58, 0.88], metallic: 0.9, roughness: 0.22 } as Material,
   gold: { color: [0.88, 0.72, 0.25], metallic: 0.95, roughness: 0.18 } as Material,
   dialSilver: { color: [0.84, 0.86, 0.89], metallic: 0.5, roughness: 0.4 } as Material,
-  dialIvory: { color: [0.87, 0.85, 0.73], metallic: 0.05, roughness: 0.72 } as Material,
+  dialIvory: { color: [0.87, 0.85, 0.73], metallic: 0.05, roughness: 0.72, opacity: 0.12 } as Material,
 };
 
 // ---------------- scene objects ----------------
@@ -218,6 +222,7 @@ interface GpuMesh {
   vbuf: GPUBuffer;
   ibuf: GPUBuffer;
   count: number;
+  center: [number, number, number];
 }
 
 type SceneView = 'always' | 'movement' | 'demo';
@@ -245,6 +250,7 @@ export class Slava5671Renderer {
   private sampler!: GPUSampler;
   private ctx!: GPUCanvasContext;
   private pipeline!: GPURenderPipeline;
+  private transparentPipeline!: GPURenderPipeline;
   private frameUBO!: GPUBuffer;
   private frameBind!: GPUBindGroup;
   private objLayout!: GPUBindGroupLayout;
@@ -342,6 +348,33 @@ export class Slava5671Renderer {
       primitive: { topology: 'triangle-list', cullMode: 'none' },
       depthStencil: { format: 'depth24plus', depthWriteEnabled: true, depthCompare: 'less' },
     });
+    this.transparentPipeline = this.device.createRenderPipeline({
+      layout: this.device.createPipelineLayout({ bindGroupLayouts: [frameLayout, objLayout] }),
+      vertex: {
+        module,
+        entryPoint: 'vs',
+        buffers: [{
+          arrayStride: 24,
+          attributes: [
+            { shaderLocation: 0, offset: 0, format: 'float32x3' },
+            { shaderLocation: 1, offset: 12, format: 'float32x3' },
+          ],
+        }],
+      },
+      fragment: {
+        module,
+        entryPoint: 'fs',
+        targets: [{
+          format,
+          blend: {
+            color: { srcFactor: 'src-alpha', dstFactor: 'one-minus-src-alpha', operation: 'add' },
+            alpha: { srcFactor: 'one', dstFactor: 'one-minus-src-alpha', operation: 'add' },
+          },
+        }],
+      },
+      primitive: { topology: 'triangle-list', cullMode: 'none' },
+      depthStencil: { format: 'depth24plus', depthWriteEnabled: false, depthCompare: 'less' },
+    });
 
     this.buildScene();
     this.resize();
@@ -407,7 +440,18 @@ export class Slava5671Renderer {
     this.device.queue.writeBuffer(vbuf, 0, data.vertices);
     const ibuf = this.device.createBuffer({ size: data.indices.byteLength, usage: GPUBufferUsage.INDEX | GPUBufferUsage.COPY_DST });
     this.device.queue.writeBuffer(ibuf, 0, data.indices);
-    return { vbuf, ibuf, count: data.indices.length };
+    const min = [Infinity, Infinity, Infinity];
+    const max = [-Infinity, -Infinity, -Infinity];
+    for (let i = 0; i < data.vertices.length; i += 6) {
+      for (let axis = 0; axis < 3; axis++) {
+        min[axis] = Math.min(min[axis], data.vertices[i + axis]);
+        max[axis] = Math.max(max[axis], data.vertices[i + axis]);
+      }
+    }
+    const center: [number, number, number] = [
+      (min[0] + max[0]) / 2, (min[1] + max[1]) / 2, (min[2] + max[2]) / 2,
+    ];
+    return { vbuf, ibuf, count: data.indices.length, center };
   }
 
   private addObject(
@@ -415,7 +459,7 @@ export class Slava5671Renderer {
     pivot: [number, number, number],
     anim: (s: SimSnapshot) => [number, number] = () => [0, 0],
     local: [number, number, number] = [0, 0, 0],
-    view: SceneView = 'movement',
+    view: SceneView = 'always',
     texture?: GPUTexture,
   ): SceneObject {
     const mesh = this.uploadMesh(data);
@@ -488,17 +532,21 @@ export class Slava5671Renderer {
     this.addObject(extrudeProfile(pinionOutline(t.escape.pinion, 1.4), 1.4, 3.4), MAT.steel, [POS.escape[0], POS.escape[1], 0],
       (s) => [s.escapeAngle, 0]);
 
-    // ---------- pallet fork with ruby pallets (verified: 2 pallet jewels) ----------
+    // ---------- Swiss lever fork with separate ruby pallets ----------
     const forkP: [number, number, number] = [POS.fork[0], POS.fork[1], 0];
     const forkAnim = (s: SimSnapshot): [number, number] => [s.forkAngle, 0];
-    // fork body: arm toward escape wheel
-    this.addObject(box(2.2, 7.5, 1.2), MAT.steel, forkP, forkAnim, [0.4, -3.4, 3.4]);
-    // entry & exit pallet stones (synthetic ruby)
-    this.addObject(box(1.1, 2.4, 1.5), MAT.ruby, forkP, forkAnim, [-1.1, -6.2, 3.2]);
-    this.addObject(box(1.1, 2.4, 1.5), MAT.ruby, forkP, forkAnim, [2.0, -5.6, 3.2]);
-    // fork horns toward the balance roller + guard pin
-    this.addObject(box(1.6, 4.2, 1.0), MAT.steel, forkP, forkAnim, [0, 3.4, 3.4]);
-    this.addObject(disc(0.28, 3.0, 4.6, 12), MAT.steel, forkP, forkAnim, [0, 5.2, 0]);
+    this.addObject(palletForkMesh(), MAT.steel, forkP, forkAnim);
+    this.addObject(palletStonesMesh(), MAT.ruby, forkP, forkAnim);
+    this.addObject(disc(0.16, 3.0, 4.3, 12), MAT.steel, forkP, forkAnim, [4.2, -3.15, 0]);
+
+    const palletBridge: [number, number][] = [
+      [-4.2, 3.6], [-3.5, 5.8], [-1.7, 6.4], [0.2, 5.4],
+      [3.2, 1.2], [3.6, -0.8], [2.2, -2.5], [0.1, -2.4],
+      [-1.5, -0.8], [-3.2, 1.6],
+    ];
+    this.addObject(roundedPlateMesh(palletBridge, 4.9, 5.55), MAT.nickelPlate, forkP);
+    this.addObject(disc(0.8, 5.5, 5.9, 24), MAT.steel, forkP, () => [0, 0], [2.1, -1.1, 0]);
+    this.addObject(disc(0.65, 5.5, 5.9, 24), MAT.steel, forkP, () => [0, 0], [-2.5, 4.4, 0]);
 
     // ---------- screwless balance (verified безвинтовый), heavy rim ----------
     const balP: [number, number, number] = [POS.balance[0], POS.balance[1], 0];
@@ -506,8 +554,8 @@ export class Slava5671Renderer {
     // rim: lathe ring
     const rimProfile: [number, number][] = [[6.4, 5.4], [7.4, 5.4], [7.6, 6.0], [7.4, 6.6], [6.4, 6.6], [6.2, 6.0], [6.4, 5.4]];
     this.addObject(lathe(rimProfile, 72), MAT.brassBright, balP, balAnim);
-    // monometallic rim with a single crossbar
-    this.addObject(box(13.2, 1.3, 0.9), MAT.brassBright, balP, balAnim, [0, 0, 6.0]);
+    // monometallic rim with a single machined crossbar
+    this.addObject(flatBarMesh(-6.6, 0, 6.6, 0, 1.3, 1.3, 5.55, 6.45), MAT.brassBright, balP, balAnim);
     // staff
     this.addObject(disc(0.5, 3.2, 9.6, 16), MAT.steel, balP, balAnim);
     // double roller + ruby impulse jewel (ellipse)
@@ -523,7 +571,7 @@ export class Slava5671Renderer {
     this.hsIBuf = this.device.createBuffer({ size: hsIdx.byteLength, usage: GPUBufferUsage.INDEX | GPUBufferUsage.COPY_DST });
     this.device.queue.writeBuffer(this.hsIBuf, 0, hsIdx);
     this.hsCount = hsIdx.length;
-    const hsMesh: GpuMesh = { vbuf: this.hsVBuf, ibuf: this.hsIBuf, count: this.hsCount };
+    const hsMesh: GpuMesh = { vbuf: this.hsVBuf, ibuf: this.hsIBuf, count: this.hsCount, center: [0, 0, 7.4] };
     const hsUbuf = this.device.createBuffer({ size: 128, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });
     const hsBind = this.device.createBindGroup({ layout: this.objLayout, entries: [
       { binding: 0, resource: { buffer: hsUbuf } },
@@ -532,30 +580,33 @@ export class Slava5671Renderer {
     ] });
     this.hsObject = {
       mesh: hsMesh, bind: hsBind, ubuf: hsUbuf,
-      pivot: balP, local: [0, 0, 0], mat: MAT.blued, anim: () => [0, 0], emissive: [0, 0, 0], view: 'movement', textured: false,
+      pivot: balP, local: [0, 0, 0], mat: MAT.blued, anim: () => [0, 0], emissive: [0, 0, 0], view: 'always', textured: false,
     };
     this.objects.push(this.hsObject);
     // hairspring stud on the cock (fixed)
-    this.addObject(box(0.9, 0.9, 1.6), MAT.brass, balP, () => [0, 0], [5.05, 1.4, 7.6]);
+    this.addObject(disc(0.48, 6.8, 8.4, 20), MAT.brass, balP, () => [0, 0], [5.05, 1.4, 0]);
 
-    // ---------- balance cock (skeleton arm) + ruby endstone ----------
-    this.addObject(box(3.4, 12.5, 1.4), MAT.nickelPlate, [POS.balance[0], POS.balance[1] + 6.8, 0], () => [0, 0], [0, 0, 8.6]);
-    this.addObject(disc(1.1, 8.2, 8.8, 20), MAT.ruby, balP);
-    this.addObject(disc(1.5, 8.6, 9.4, 20), MAT.steelSatin, [POS.balance[0], POS.balance[1] + 5.6, 0]);
+    // ---------- early two-ear balance cock with a screwed staff ----------
+    this.addObject(balanceCockMesh(), MAT.nickelPlate, balP);
+    this.addObject(disc(0.72, 8.55, 8.85, 24), MAT.ruby, balP);
+    this.addObject(disc(0.36, 8.8, 9.35, 20), MAT.steel, balP);
+    this.addObject(disc(0.65, 8.6, 9.0, 24), MAT.steel, balP, () => [0, 0], [-6.2, 3.7, 0]);
+    this.addObject(disc(0.65, 8.6, 9.0, 24), MAT.steel, balP, () => [0, 0], [1.0, -6.4, 0]);
 
     // ---------- nickel-plated train and alarm bridges ----------
     const bridgeZ = 5.2;
     const trainBridge: [number, number][] = [
-      [-25, 12], [-23, 20], [-16, 24], [-7, 23], [2, 18], [10, 13],
-      [13, 8], [9, 4], [4, 3], [2, -3], [-1, -9], [-5, -12],
-      [-9, -9], [-12, -4], [-18, 0], [-23, 5],
+      [-25, 12], [-24, 19], [-18, 23], [-10, 24], [-3, 22], [4, 18],
+      [10, 13], [13, 8], [10, 5], [5, 4], [2, 1], [1, -4],
+      [-2, -10], [-5, -12], [-8, -10], [-10, -5], [-15, -1], [-21, 3], [-24, 7],
     ];
-    this.addObject(extrudeProfile(trainBridge, bridgeZ, bridgeZ + 1.2), MAT.nickelPlate, [0, 0, 0]);
+    this.addObject(roundedPlateMesh(trainBridge, bridgeZ, bridgeZ + 1.2), MAT.nickelPlate, [0, 0, 0]);
     const alarmBridge: [number, number][] = [
-      [10, 22], [18, 23], [24, 18], [26, 10], [25, 1], [22, -8],
-      [18, -12], [14, -10], [13, -4], [16, 3], [13, 10], [9, 15],
+      [10, 22], [18, 23], [24, 18], [26, 10], [25, 5], [22, 3],
+      [20, 5], [19, 9], [17, 12], [15, 10], [16, 5], [18, 1],
+      [22, -4], [22, -8], [18, -12], [14, -10], [13, -4], [16, 3], [13, 10], [9, 15],
     ];
-    this.addObject(extrudeProfile(alarmBridge, bridgeZ, bridgeZ + 1.2), MAT.nickelPlate, [0, 0, 0]);
+    this.addObject(roundedPlateMesh(alarmBridge, bridgeZ, bridgeZ + 1.2), MAT.nickelPlate, [0, 0, 0]);
     // pivot jewels in the train (brass bushings — train unjewelled, verified) rendered as bushings
     for (const p of [POS.barrel, POS.center, POS.third, POS.fourth]) {
       this.addObject(disc(1.0, bridgeZ + 0.5, bridgeZ + 1.1, 16), MAT.brassBright, [p[0], p[1], 0]);
@@ -568,7 +619,8 @@ export class Slava5671Renderer {
     // hour wheel with lug (усик), axial spring tension; drops into alarm wheel slot
     const hourAnim = (s: SimSnapshot): [number, number] => [-s.hourHandAngle, -s.hourWheelDrop * SPEC.hourWheelAxialDrop];
     this.addObject(disc(8.6, 3.4, 4.4, 48), MAT.steelSatin, [POS.center[0], POS.center[1], 0], hourAnim);
-    this.addObject(box(1.2, 1.2, 1.6), MAT.steel, [POS.center[0], POS.center[1], 0], hourAnim, [0, -7.6, 1.2]); // the lug
+    this.addObject(extrudeProfile([[-0.6, -0.7], [0.6, -0.55], [0.45, 0.75], [-0.45, 0.65]], 4.3, 5.2), MAT.steel,
+      [POS.center[0], POS.center[1], 0], hourAnim, [0, -7.6, 0]);
     // alarm wheel with the slot (паз) — rotates with the central alarm hand
     const alarmAnim = (s: SimSnapshot): [number, number] => [-s.alarmHandAngle, 0];
     this.addObject(disc(7.2, 4.8, 5.6, 48), MAT.brass, [POS.center[0], POS.center[1], 0], alarmAnim);
@@ -589,34 +641,28 @@ export class Slava5671Renderer {
     // ---------- hammer: fork + axle + bracket + head (verified construction) ----------
     const hamP: [number, number, number] = [POS.hammer[0], POS.hammer[1], 0];
     const hamAnim = (s: SimSnapshot): [number, number] => [-Math.PI / 2 - s.hammerAngle * 0.35, 0];
-    this.addObject(box(1.4, 8.5, 1.1), MAT.steel, hamP, hamAnim, [0, 4.5, 3.6]);
+    this.addObject(flatBarMesh(0, 0.4, 0, 8.6, 1.35, 0.95, 3.05, 4.15), MAT.steel, hamP, hamAnim);
     const headProfile: [number, number][] = [[0, 2.6], [1.6, 2.8], [2.0, 3.6], [2.0, 4.6], [1.6, 5.2], [0, 5.3]];
     this.addObject(lathe(headProfile, 32), MAT.steel, hamP, hamAnim, [0, 8.8, 0.6]);
-    this.addObject(box(1.1, 7.5, 0.9), MAT.steelSatin, hamP, hamAnim, [0, -3.4, 3.2]);
+    this.addObject(flatBarMesh(0, -0.2, 0, -7.1, 1.05, 0.75, 2.75, 3.65), MAT.steelSatin, hamP, hamAnim);
 
-    // ---------- early export dial and the actual three central hands ----------
+    // ---------- translucent dial and the three original hand profiles ----------
     const handCenterP: [number, number, number] = [POS.center[0], POS.center[1], 0];
     this.addObject(disc(26.5, 6.4, 6.65, 96), MAT.dialIvory, handCenterP,
-      () => [0, 0], [0, 0, 0], 'demo', this.dialTexture);
+      () => [0, 0], [0, 0, 0], 'always', this.dialTexture);
 
     this.addObject(alarmHandMesh(22.0, 7.0, 7.2), MAT.brassBright, handCenterP,
-      (s) => [-s.alarmHandAngle, 0], [0, 0, 0], 'demo');
-    this.addObject(disc(1.9, 6.8, 7.5, 24), MAT.brass, handCenterP,
-      () => [0, 0], [0, 0, 0], 'demo');
-
-    this.addObject(hourHandMesh(16.5, 7.8, 8.0), MAT.blued, handCenterP,
-      (s) => [-s.hourHandAngle, -s.hourWheelDrop * SPEC.hourWheelAxialDrop], [0, 0, 0], 'demo');
-    this.addObject(disc(1.7, 7.6, 8.1, 24), MAT.blued, handCenterP,
-      () => [0, 0], [0, 0, 0], 'demo');
-
+      (s) => [-s.alarmHandAngle, 0], [0, 0, 0], 'always');
+    this.addObject(hourHandMesh(18.0, 7.8, 8.0), MAT.blued, handCenterP,
+      (s) => [-s.hourHandAngle, -s.hourWheelDrop * SPEC.hourWheelAxialDrop], [0, 0, 0], 'always');
     this.addObject(minuteHandMesh(23.5, 8.6, 8.8), MAT.blued, handCenterP,
-      (s) => [-s.minuteHandAngle, 0], [0, 0, 0], 'demo');
-    this.addObject(disc(1.2, 8.4, 9.0, 24), MAT.blued, handCenterP,
-      () => [0, 0], [0, 0, 0], 'demo');
+      (s) => [-s.minuteHandAngle, 0], [0, 0, 0], 'always');
+    this.addObject(disc(0.42, 8.8, 9.25, 20), MAT.steel, handCenterP,
+      () => [0, 0], [0, 0, 0], 'always');
 
     for (const [px, py] of [[-18, -16], [18, -16], [-18, 16], [18, 16]] as const) {
       this.addObject(disc(0.8, 1.2, 6.4, 16), MAT.brass, [POS.center[0] + px * 0.7, POS.center[1] + py * 0.7, 0],
-        () => [0, 0], [0, 0, 0], 'movement');
+        () => [0, 0], [0, 0, 0], 'always');
     }
 
     // ---------- polished slotted bridge screws ----------
@@ -691,7 +737,7 @@ export class Slava5671Renderer {
       this.targetDist = 105;
       this.targetLookAt = [0, 0, -1];
     } else if (view === 'demo' || view === 'top') {
-      // Demonstration view looking at the dial face and 4 hands
+      // Demonstration view looking at the translucent dial and three hands
       this.targetYaw = 0.0;
       this.targetPitch = 1.35;
       this.targetDist = 92;
@@ -781,7 +827,7 @@ export class Slava5671Renderer {
       const u = new Float32Array(32);
       u.set(model, 0);
       u.set([o.mat.color[0], o.mat.color[1], o.mat.color[2], o.mat.metallic], 16);
-      u.set([o.mat.roughness, o.textured ? 1 : 0, 0, 0], 20);
+      u.set([o.mat.roughness, o.textured ? 1 : 0, o.mat.opacity ?? 1, 0], 20);
       const em = o === this.objects[0] ? this.bellFlash : 0; // bell is object 0
       u.set([em * 0.5, em * 0.5, em * 0.55, 0], 24);
       u.set([0, 0, 0, 0], 28);
@@ -803,15 +849,36 @@ export class Slava5671Renderer {
         depthStoreOp: 'store',
       },
     });
-    pass.setPipeline(this.pipeline);
     pass.setBindGroup(0, this.frameBind);
-    for (const o of this.objects) {
-      if ((this.viewMode === 'demo' && o.view === 'movement') || (this.viewMode !== 'demo' && o.view === 'demo')) continue;
+    const visible = this.objects.filter((o) => !(
+      (this.viewMode === 'escapement' && o.textured) ||
+      (this.viewMode === 'demo' && o.view === 'movement') || (this.viewMode !== 'demo' && o.view === 'demo')
+    ));
+    const drawObject = (o: SceneObject) => {
       pass.setBindGroup(1, o.bind);
       pass.setVertexBuffer(0, o.mesh.vbuf);
       pass.setIndexBuffer(o.mesh.ibuf, 'uint32');
       pass.drawIndexed(o.mesh.count);
+    };
+
+    pass.setPipeline(this.pipeline);
+    for (const o of visible) {
+      if ((o.mat.opacity ?? 1) >= 1) drawObject(o);
     }
+
+    const transparent = visible.filter((o) => (o.mat.opacity ?? 1) < 1);
+    const distanceToCamera = (o: SceneObject) => {
+      const [spin, zOff] = o.anim(snap);
+      const c = Math.cos(spin), s = Math.sin(spin);
+      const lx = o.local[0] + o.mesh.center[0], ly = o.local[1] + o.mesh.center[1];
+      const x = o.pivot[0] + c * lx - s * ly;
+      const y = o.pivot[1] + s * lx + c * ly;
+      const z = o.pivot[2] + zOff + o.local[2] + o.mesh.center[2];
+      return (x - eye[0]) ** 2 + (y - eye[1]) ** 2 + (z - eye[2]) ** 2;
+    };
+    transparent.sort((a, b) => distanceToCamera(b) - distanceToCamera(a));
+    pass.setPipeline(this.transparentPipeline);
+    for (const o of transparent) drawObject(o);
     pass.end();
     this.device.queue.submit([encoder.finish()]);
   }

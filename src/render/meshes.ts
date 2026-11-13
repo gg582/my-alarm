@@ -260,21 +260,40 @@ export function spokedGearMesh(
   return mergeMeshes(parts);
 }
 
-/** Swiss lever escape wheel: 15 club teeth with impulse plane (verified conventional form) */
+/** Swiss lever escape-wheel outline with swept stems and broad club tips. */
 export function escapeWheelOutline(teeth: number, radius: number): [number, number][] {
   const pts: [number, number][] = [];
-  const rRoot = radius * 0.72;
   const step = (Math.PI * 2) / teeth;
+  const polar = (r: number, a: number): [number, number] => [r * Math.cos(a), r * Math.sin(a)];
   for (let i = 0; i < teeth; i++) {
     const a = i * step;
-    pts.push([rRoot * Math.cos(a), rRoot * Math.sin(a)]);
-    // long curved rise to the club
-    pts.push([radius * 0.97 * Math.cos(a + step * 0.42), radius * 0.97 * Math.sin(a + step * 0.42)]);
-    pts.push([radius * Math.cos(a + step * 0.52), radius * Math.sin(a + step * 0.52)]);
-    // steep locking face back down
-    pts.push([rRoot * Math.cos(a + step * 0.62), rRoot * Math.sin(a + step * 0.62)]);
+    pts.push(polar(radius * 0.66, a));
+    pts.push(polar(radius * 0.72, a + step * 0.18));
+    pts.push(polar(radius * 0.91, a + step * 0.42));
+    pts.push(polar(radius, a + step * 0.47));
+    pts.push(polar(radius, a + step * 0.62));
+    pts.push(polar(radius * 0.89, a + step * 0.65));
+    pts.push(polar(radius * 0.74, a + step * 0.35));
+    pts.push(polar(radius * 0.66, a + step * 0.58));
   }
   return pts;
+}
+
+export function escapeWheelMesh(teeth: number, radius: number, z0: number, z1: number): MeshData {
+  const parts: MeshData[] = [
+    toothedRingMesh(escapeWheelOutline(teeth, radius), radius * 0.6, z0, z1),
+    disc(radius * 0.15, z0, z1, 28),
+  ];
+  for (let i = 0; i < 5; i++) {
+    const angle = (i / 5) * Math.PI * 2;
+    const c = Math.cos(angle), s = Math.sin(angle);
+    parts.push(flatBarMesh(
+      c * radius * 0.1, s * radius * 0.1,
+      c * radius * 0.64, s * radius * 0.64,
+      radius * 0.075, radius * 0.055, z0, z1,
+    ));
+  }
+  return mergeMeshes(parts);
 }
 
 /** saw-tooth wheel of the alarm hammer fork (verified "like a circular saw") */
@@ -399,24 +418,49 @@ export function hairspringIndices(segments: number): Uint32Array<ArrayBuffer> {
 
 export function palletForkMesh(z0 = 3.0, z1 = 3.35): MeshData {
   return mergeMeshes([
-    ringMesh(0.9, 0.3, z0, z1, 28),
-    flatBarMesh(0, 0.25, 0, 2.25, 0.75, 0.55, z0, z1),
-    flatBarMesh(0, 1.8, -1.45, 4.6, 0.58, 0.42, z0, z1),
-    flatBarMesh(0, 1.8, 1.55, 4.1, 0.58, 0.42, z0, z1),
-    flatBarMesh(0, -0.2, 3.65, -3.1, 0.68, 0.38, z0, z1),
-    flatBarMesh(3.65, -3.1, 4.75, -2.45, 0.36, 0.25, z0, z1),
-    flatBarMesh(3.65, -3.1, 4.75, -3.95, 0.36, 0.25, z0, z1),
+    ringMesh(0.72, 0.26, z0, z1, 28),
+    flatBarMesh(0, 0, -0.85, 0.95, 0.62, 0.48, z0, z1),
+    flatBarMesh(-0.85, 0.95, -1.2, 2.3, 0.48, 0.36, z0, z1),
+    flatBarMesh(-0.85, 0.95, -2.6, 0, 0.48, 0.36, z0, z1),
+    flatBarMesh(0.15, -0.05, 3.75, -2.55, 0.58, 0.32, z0, z1),
+    flatBarMesh(3.75, -2.55, 4.65, -2.1, 0.32, 0.22, z0, z1),
+    flatBarMesh(3.75, -2.55, 4.65, -3.3, 0.32, 0.22, z0, z1),
   ]);
 }
 
-export function palletStonesMesh(z0 = 2.9, z1 = 3.55): MeshData {
+export function palletStonesMesh(z0 = 2.85, z1 = 3.45): MeshData {
   const stone = extrudeProfile([
-    [-0.42, -0.85], [0.34, -0.72], [0.48, 0.78], [-0.28, 0.92],
+    [-0.34, -0.72], [0.3, -0.66], [0.4, 0.68], [-0.25, 0.78],
   ], z0, z1);
   return mergeMeshes([
-    transformedMesh(stone, -0.25, -1.45, 4.6, 0),
-    transformedMesh(stone, 0.35, 1.55, 4.1, 0),
+    transformedMesh(stone, -0.35, -1.2, 2.3, 0),
+    transformedMesh(stone, 1.1, -2.6, 0, 0),
   ]);
+}
+
+export function alarmGuardMesh(z0 = 4.0, z1 = 4.35): MeshData {
+  const outline: [number, number][] = [
+    [1.0, 0.9], [0.4, 1.45], [-1.8, 1.25], [-4.8, 1.8], [-6.8, 2.65],
+    [-7.75, 2.8], [-8.35, 2.1], [-8.15, 1.15], [-7.2, 0.65],
+    [-5.0, 0.55], [-2.2, -0.25], [-0.6, -0.95], [0.75, -0.75], [1.2, 0],
+  ];
+  const stop = transformedMesh(extrudeProfile([
+    [-0.65, -0.75], [0.35, -0.65], [0.7, 0.45], [0.2, 1.1], [-0.5, 0.8],
+  ], z0 - 1.1, z1 + 0.45), -0.2, -7.15, 1.3, 0);
+  return mergeMeshes([
+    roundedPlateMesh(outline, z0, z1, 2),
+    ringMesh(1.05, 0.42, z0, z1, 32),
+    stop,
+  ]);
+}
+
+export function hammerForkMesh(z0 = 2.8, z1 = 3.35): MeshData {
+  const outline: [number, number][] = [];
+  for (let i = 0; i <= 20; i++) {
+    const angle = (i / 20) * Math.PI;
+    outline.push([Math.cos(angle) * 1.65, Math.sin(angle) * 1.65]);
+  }
+  return plateMesh(outline, z0, z1);
 }
 
 export function balanceCockMesh(z0 = 8.1, z1 = 8.65): MeshData {

@@ -14,10 +14,11 @@
  */
 
 import {
-  extrudeProfile, gearOutline, pinionOutline, escapeWheelOutline,
+  extrudeProfile, gearOutline, pinionOutline, escapeWheelMesh,
   sawWheelOutline, lathe, box, disc, hairspringVertices, hairspringIndices,
   spokedGearMesh, hourHandMesh, minuteHandMesh, alarmHandMesh,
   roundedPlateMesh, flatBarMesh, palletForkMesh, palletStonesMesh, balanceCockMesh,
+  alarmGuardMesh, hammerForkMesh,
 } from './meshes';
 import type { MeshData } from './meshes';
 import type { SimSnapshot, SimEvent } from '../sim/physics';
@@ -494,12 +495,12 @@ export class Slava5671Renderer {
       center: [0, 0] as const,
       third: [9, 5] as const,
       fourth: [-1, -5] as const,
-      escape: [-2, -13] as const,
-      fork: [-3, -16.5] as const,
-      balance: [1, -20] as const,
+      escape: [-4.5, -12.5] as const,
+      fork: [1, -15.8] as const,
+      balance: [5.5, -18.8] as const,
       alarmBarrel: [15, 9] as const,
       saw: [13, -5] as const,
-      hammer: [18, -13] as const,
+      hammer: [17, -9] as const,
     };
 
     // ---------- time barrel (brass, verified) ----------
@@ -526,8 +527,8 @@ export class Slava5671Renderer {
     this.addObject(extrudeProfile(pinionOutline(t.fourth.pinion, 1.8), 2.0, 3.6), MAT.steel, [POS.fourth[0], POS.fourth[1], 0],
       (s) => [s.fourthAngle, 0]);
 
-    // ---------- escape wheel: 15 club teeth, steel, jewelled pivots ----------
-    this.addObject(extrudeProfile(escapeWheelOutline(SPEC.escapeWheelTeeth, t.escape.pitch), 2.2, 3.0), MAT.brassBright, [POS.escape[0], POS.escape[1], 0],
+    // ---------- open five-spoke escape wheel with 15 club teeth ----------
+    this.addObject(escapeWheelMesh(SPEC.escapeWheelTeeth, t.escape.pitch, 2.2, 3.0), MAT.brassBright, [POS.escape[0], POS.escape[1], 0],
       (s) => [s.escapeAngle, 0]);
     this.addObject(extrudeProfile(pinionOutline(t.escape.pinion, 1.4), 1.4, 3.4), MAT.steel, [POS.escape[0], POS.escape[1], 0],
       (s) => [s.escapeAngle, 0]);
@@ -537,16 +538,17 @@ export class Slava5671Renderer {
     const forkAnim = (s: SimSnapshot): [number, number] => [s.forkAngle, 0];
     this.addObject(palletForkMesh(), MAT.steel, forkP, forkAnim);
     this.addObject(palletStonesMesh(), MAT.ruby, forkP, forkAnim);
-    this.addObject(disc(0.16, 3.0, 4.3, 12), MAT.steel, forkP, forkAnim, [4.2, -3.15, 0]);
+    this.addObject(disc(0.14, 3.0, 4.3, 12), MAT.steel, forkP, forkAnim, [4.15, -2.7, 0]);
+    this.addObject(disc(0.22, 2.4, 4.1, 16), MAT.brassBright, forkP, () => [0, 0], [3.65, -1.75, 0]);
+    this.addObject(disc(0.22, 2.4, 4.1, 16), MAT.brassBright, forkP, () => [0, 0], [3.65, -3.85, 0]);
 
     const palletBridge: [number, number][] = [
-      [-4.2, 3.6], [-3.5, 5.8], [-1.7, 6.4], [0.2, 5.4],
-      [3.2, 1.2], [3.6, -0.8], [2.2, -2.5], [0.1, -2.4],
-      [-1.5, -0.8], [-3.2, 1.6],
+      [-1.8, 2.8], [-0.8, 3.6], [0.4, 3.3], [1.1, 2.4], [1.8, 0.4],
+      [1.7, -1.7], [0.6, -2.5], [-0.8, -2.1], [-1.6, -0.8],
     ];
     this.addObject(roundedPlateMesh(palletBridge, 4.9, 5.55), MAT.nickelPlate, forkP);
-    this.addObject(disc(0.8, 5.5, 5.9, 24), MAT.steel, forkP, () => [0, 0], [2.1, -1.1, 0]);
-    this.addObject(disc(0.65, 5.5, 5.9, 24), MAT.steel, forkP, () => [0, 0], [-2.5, 4.4, 0]);
+    this.addObject(disc(0.65, 5.5, 5.9, 24), MAT.steel, forkP, () => [0, 0], [0.8, -1.4, 0]);
+    this.addObject(disc(0.6, 5.5, 5.9, 24), MAT.steel, forkP, () => [0, 0], [-0.7, 2.4, 0]);
 
     // ---------- screwless balance (verified безвинтовый), heavy rim ----------
     const balP: [number, number, number] = [POS.balance[0], POS.balance[1], 0];
@@ -638,13 +640,21 @@ export class Slava5671Renderer {
     this.addObject(extrudeProfile(sawWheelOutline(SPEC.hammerForkWheelTeeth, 4.6), 2.4, 3.2), MAT.brassBright, [POS.saw[0], POS.saw[1], 0],
       (s) => [s.alarmWheelAngle, 0]);
 
-    // ---------- hammer: fork + axle + bracket + head (verified construction) ----------
+    // ---------- pivoted alarm shut-off guard with a bent locking pawl ----------
+    const guardP: [number, number, number] = [19.5, -2.5, 0];
+    this.addObject(alarmGuardMesh(), MAT.steelSatin, guardP,
+      (s) => [s.alarmEnabled ? -0.12 : 0.18, 0]);
+    this.addObject(disc(0.46, 4.3, 5.0, 20), MAT.steel, guardP);
+
+    // ---------- hammer: semicircular fork, bent wire rod and cylindrical head ----------
     const hamP: [number, number, number] = [POS.hammer[0], POS.hammer[1], 0];
-    const hamAnim = (s: SimSnapshot): [number, number] => [-Math.PI / 2 - s.hammerAngle * 0.35, 0];
-    this.addObject(flatBarMesh(0, 0.4, 0, 8.6, 1.35, 0.95, 3.05, 4.15), MAT.steel, hamP, hamAnim);
+    const hamAnim = (s: SimSnapshot): [number, number] => [Math.PI / 4 + s.hammerAngle * 0.35, 0];
+    this.addObject(hammerForkMesh(), MAT.steelSatin, hamP, hamAnim);
+    this.addObject(disc(0.42, 2.0, 5.0, 20), MAT.steel, hamP);
+    this.addObject(flatBarMesh(0, -0.5, 0.55, -4.5, 0.48, 0.34, 3.5, 3.85), MAT.steel, hamP, hamAnim);
+    this.addObject(flatBarMesh(0.55, -4.5, 0, -8.5, 0.34, 0.28, 3.5, 3.85), MAT.steel, hamP, hamAnim);
     const headProfile: [number, number][] = [[0, 2.6], [1.6, 2.8], [2.0, 3.6], [2.0, 4.6], [1.6, 5.2], [0, 5.3]];
-    this.addObject(lathe(headProfile, 32), MAT.steel, hamP, hamAnim, [0, 8.8, 0.6]);
-    this.addObject(flatBarMesh(0, -0.2, 0, -7.1, 1.05, 0.75, 2.75, 3.65), MAT.steelSatin, hamP, hamAnim);
+    this.addObject(lathe(headProfile, 32), MAT.steel, hamP, hamAnim, [0, -8.8, 0.6]);
 
     // ---------- translucent dial and the three original hand profiles ----------
     const handCenterP: [number, number, number] = [POS.center[0], POS.center[1], 0];

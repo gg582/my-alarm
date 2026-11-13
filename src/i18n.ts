@@ -2,7 +2,7 @@ export type Lang = 'ko' | 'en';
 
 export const I18N = {
   ko: {
-    subtitle: (jewels: number) => `2nd Moscow Watch Factory · 56 mm · ${jewels} Jewels · 18,000 vph · 4-Hand 기계식 무브먼트 (시/분/초/알람)`,
+    subtitle: (jewels: number) => `2nd Moscow Watch Factory · 55.8 × 19 mm · ${jewels} Jewels · 18,000 vph · 3-Hand 기계식 무브먼트 (시/분/알람)`,
     alarmRinging: '알람 울림!',
     unmute: '소리 켜기',
     mute: '소리 끄기',
@@ -12,7 +12,7 @@ export const I18N = {
     alarmRingingAlert: '기계식 알람이 울리고 있습니다!',
     turnOffAlarm: '알람 끄기',
     view3D: '3D 각도',
-    viewDemo: '데모 (다이얼&4침)',
+    viewDemo: '데모 (다이얼&3침)',
     viewEscapement: '탈진기',
     movementTitle: '무브먼트 조작 & 태엽',
     running: '동작 중',
@@ -69,7 +69,7 @@ export const I18N = {
     specTrain: '기어열 상태:',
     specVph: '진동수: 18,000 vph',
     specDescTitle: 'Slava Caliber 5671:',
-    specDesc: '제2모스크바시계공장(2МЧЗ)에서 생산된 56mm 직경의 대표적인 기계식 알람 무브먼트입니다. 600:1의 센터-탈진 바퀴 기어비와 스위스 레버 탈진기, 슬리핑 브라이들 알람 배럴을 정밀 시뮬레이션합니다.',
+    specDesc: '제2모스크바시계공장(2МЧЗ)에서 생산된 지름 55.8mm·높이 19mm의 대표적인 기계식 알람 무브먼트입니다. 600:1의 센터-탈진 바퀴 기어비와 스위스 레버 탈진기, 슬리핑 브라이들 알람 배럴을 정밀 시뮬레이션합니다.',
     windTimeBar: '🌀 시간 감기',
     windAlarmBar: '🔔 알람 감기',
     sheetCollapse: '접기',
@@ -78,7 +78,7 @@ export const I18N = {
     svgDragTime: '🟡 시계침 조정',
   },
   en: {
-    subtitle: (jewels: number) => `2nd Moscow Watch Factory · 56 mm · ${jewels} Jewels · 18,000 vph · 4-Hand Mechanical Movement (H/M/S/Alarm)`,
+    subtitle: (jewels: number) => `2nd Moscow Watch Factory · 55.8 × 19 mm · ${jewels} Jewels · 18,000 vph · 3-Hand Mechanical Movement (H/M/Alarm)`,
     alarmRinging: 'Ringing!',
     unmute: 'Unmute',
     mute: 'Mute',
@@ -88,7 +88,7 @@ export const I18N = {
     alarmRingingAlert: 'Mechanical alarm is ringing!',
     turnOffAlarm: 'Turn Off',
     view3D: '3D View',
-    viewDemo: 'Demo (Dial & 4 Hands)',
+    viewDemo: 'Demo (Dial & 3 Hands)',
     viewEscapement: 'Escapement',
     movementTitle: 'Movement & Winding',
     running: 'Running',
@@ -145,7 +145,7 @@ export const I18N = {
     specTrain: 'Wheel Train:',
     specVph: 'Beat Rate: 18,000 vph',
     specDescTitle: 'Slava Caliber 5671:',
-    specDesc: 'An iconic 56mm mechanical alarm clock movement produced by the 2nd Moscow Watch Factory (2MChZ). Features a 600:1 center-to-escape gear ratio, Swiss lever escapement, and slipping-bridle alarm barrel.',
+    specDesc: 'An iconic 55.8 × 19mm mechanical alarm clock movement produced by the 2nd Moscow Watch Factory (2MChZ). Features a 600:1 center-to-escape gear ratio, Swiss lever escapement, and slipping-bridle alarm barrel.',
     windTimeBar: '🌀 Wind Time',
     windAlarmBar: '🔔 Wind Alarm',
     sheetCollapse: 'Close',

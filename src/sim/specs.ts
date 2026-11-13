@@ -1,106 +1,85 @@
 /**
- * Slava (Слава) Caliber 5671 — verified technical specification.
+ * Slava (Слава) caliber 5671, early all-metal version.
  *
- * Sources (researched from Russian horological literature & teardowns):
- *  - ГОСТ 3145-84 / factory passport: 56 mm caliber, 11 ruby jewels, accuracy class 11,
- *    power reserve >= 36 h from one full winding, balance period 0.4 s.
- *  - Bibliotekar / Soviet commodity reference: "Слава — малогабаритный будильник с анкерным
- *    палетным спуском, механизм калибра 56 мм, на 11 рубиновых камнях, с центральной
- *    сигнальной стрелкой, период колебания баланса 0,4 сек, продолжительность хода не менее 36 ч.
- *    Точность хода ±1,5 мин в сутки."
- *  - mysku.club full teardowns (cal. 5671, early all-metal variant):
- *      · jewel allocation: 4 balance (2 hole + 2 cap), 1 impulse (ellipse), 2 pallets,
- *        4 pivot jewels for pallet arbor & escape-wheel arbor = 11 (jewelled escapement only,
- *        gear train runs in brass bushings);
- *      · screwless (безвинтовый) heavy balance, flat (non-Breguet) hairspring, double roller
- *        with ellipse impulse jewel;
- *      · alarm barrel with friction slipping bridle (as in automatic watches) so the alarm
- *        spring cannot be broken by overwinding;
- *      · hour wheel carries a lug (усик) under axial spring tension; the alarm wheel
- *        (сигнальное колесо) has a slot (паз); when the lug aligns with the slot the hour
- *        wheel drops axially, the stop spring (стопорная пружина) releases the hammer, and
- *        the alarm barrel drives the hammer-fork wheel (колесо вилки молоточка, saw-toothed,
- *        a simplified anchor escapement) that oscillates the hammer against the back-cover
- *        bell (крышка-звонок);
- *      · single train bridge covers five arbors: barrel, center, third, fourth, escape;
- *      · center wheel with pressed minute pinion; motion works: cannon pinion (вексельное
- *        колесо), intermediate wheel, hour wheel;
- *      · alarm duration >= 20 s; alarm set accuracy ±8 min.
- *  - Watch.ru repair documentation: Swiss-lever escape wheels conventionally carry 15 teeth
- *    with simplified tooth form (locking plane + impulse plane + tip).
+ * Primary references:
+ *  - V. A. Shamonova, "Repair of Mechanical Alarm Clocks" (1987), pp. 4, 12–14:
+ *    55.8 mm reduced caliber, 19 mm height, 11 jewels, 0.4 s balance period,
+ *    at least 36 h reserve, at least 15 s alarm, ±5 min alarm release tolerance,
+ *    central alarm hand, brass monometallic balance, Swiss lever escapement.
+ *    https://www.cccp-forum.it/docs/books/Shamonova%20-%20Remont%20mekhanicheskikh%20budilnikov%20(1987).pdf
+ *  - A. A. Kharitonchuk, "Watch Repair Reference Book" (1977), pp. 143–145:
+ *    caliber nomenclature, going train, alarm train and motion-work construction.
+ *    https://www.cccp-forum.it/docs/books/Kharitonchuk%20-%20Spravochnaya%20Kniga%20Po%20Remontu%20Chasov%20(1977).pdf
+ *  - LePart's early all-metal 5671 teardown: component layout, five-spoke train
+ *    wheels, blued hour/minute hands, brass alarm needle, 14-tooth hammer-fork
+ *    wheel, barrel teeth, bridges, jewels and slipping alarm-spring bridle.
+ *    https://mysku.club/blog/diy/86519.html
+ *  - Official Slava 1983 catalog: the many case/dial variants and the standard
+ *    blued steel hands with a brass central alarm hand (not a seconds hand).
+ *    https://slava.su/spravochnaja-informatsija/istoricheskie-katalogi-chasov-slava/katalog-chasov-slava-1983-budilniki/
  *
- * Gear tooth counts were never published by the 2nd Moscow Watch Factory. The counts below
- * are reconstructed to be strictly consistent with the verified kinematic constraints:
- *   · center wheel: 1 rev / hour (motion works constraint);
- *   · escape wheel: 15 teeth, one tooth per 0.4 s balance period  =>  1 rev / 6 s;
- *   · therefore center:escape total ratio = 3600/6 = 600 exactly;
- *   · time barrel sized for >= 36 h reserve with ~9 effective spring turns.
+ * The factory literature does not publish every tooth count or component size.
+ * Photo-derived counts and normalized dynamics below are simulation parameters,
+ * not claims of factory metrology. The time-indicating train is ratio-exact:
+ * 15 escape teeth, one half-tooth per 0.2 s beat, one escape revolution per 6 s,
+ * and one center-wheel revolution per hour (600:1).
  */
 
 export const SPEC = {
   caliber: '5671',
   jewels: 11,
-  mainplateRadius: 28, // mm — калибр 56 мм
+  mainplateRadius: 27.9,
+  movementHeight: 19,
 
-  // ---- Oscillator (verified: T = 0.4 s, 18 000 vph, 5 beats/s) ----
-  balancePeriod: 0.4, // s
-  get balanceFrequencyHz() { return 1 / this.balancePeriod; }, // 2.5 Hz
+  balancePeriod: 0.4,
+  get balanceFrequencyHz() { return 1 / this.balancePeriod; },
   beatsPerSecond: 5,
-  balanceAmplitudeRad: (270 * Math.PI) / 180, // ~270° full wind (typ. 160–300°)
-  balanceInertia: 1.0, // normalised; stiffness derived from verified period
+  balanceAmplitudeRad: (270 * Math.PI) / 180,
+  balanceInertia: 1.0,
 
-  // ---- Escapement (Swiss lever, jewelled) ----
   escapeWheelTeeth: 15,
-  escapeWheelRevSeconds: 15 * 0.4, // 6 s — one tooth per balance period
-  palletForkTotalSwingRad: (12 * Math.PI) / 180, // ~±6° fork swing
+  escapeWheelRevSeconds: 15 * 0.4,
+  palletForkTotalSwingRad: (12 * Math.PI) / 180,
   unlockAngleRad: (1.5 * Math.PI) / 180,
-  impulseFractionOfTooth: 0.55, // fraction of tooth pitch of impulse contact
+  impulseFractionOfTooth: 0.55,
 
-  // ---- Going train (reconstructed, ratio-exact: 600:1 center→escape) ----
-  // barrel → center → third → fourth → escape
   train: {
-    barrel:      { wheelTeeth: 72, pitch: 19.0 },  // meshes center pinion
-    center:      { pinion: 18, wheelTeeth: 80, pitch: 15.0 }, // 1 rev / hour
-    third:       { pinion: 8,  wheelTeeth: 75, pitch: 11.0 }, // 1 rev / 6 min
-    fourth:      { pinion: 10, wheelTeeth: 64, pitch: 8.0 },  // 1 rev / 48 s
-    escape:      { pinion: 8,  wheelTeeth: 15, pitch: 5.2 },  // 1 rev / 6 s
+    barrel:      { wheelTeeth: 96, pitch: 13.5 },
+    center:      { pinion: 12, wheelTeeth: 80, pitch: 9.0 },
+    third:       { pinion: 8,  wheelTeeth: 75, pitch: 11.0 },
+    fourth:      { pinion: 10, wheelTeeth: 64, pitch: 7.0 },
+    escape:      { pinion: 8,  wheelTeeth: 15, pitch: 4.6 },
   },
-  // verification: (80/8)·(75/10)·(64/8) = 10·7.5·8 = 600 ✓
-  centerToEscapeRatio: (80 / 8) * (75 / 10) * (64 / 8), // 600
-  barrelToCenterRatio: 72 / 18, // 4 → barrel: 1 rev / 4 h
+  centerToEscapeRatio: (80 / 8) * (75 / 10) * (64 / 8),
+  barrelToCenterRatio: 96 / 12,
 
-  // ---- Time mainspring barrel ----
   timeBarrel: {
-    fullTurns: 9,            // 9 barrel revolutions ≈ 36 h at 4 h/rev  ✓ verified reserve
-    maxTorque: 1.0,          // normalised
-    reserveHours: 36,
-    revHours: 4,
-  },
-
-  // ---- Motion works (12:1) ----
-  motionWorks: {
-    cannonPinionTeeth: 14,
-    minuteWheelTeeth: 42,   // 3:1
-    minuteWheelPinion: 10,
-    hourWheelTeeth: 40,     // 4:1 → total 12:1 ✓
-  },
-
-  // ---- Alarm (signal) mechanism ----
-  alarmBarrel: {
-    fullTurns: 2.2,          // small barrel, wound daily (factory manual)
+    fullTurns: 4.5,
     maxTorque: 1.0,
-    // alarm barrel → hammer-fork wheel pinion
-    wheelTeeth: 60,
-    pinion: 8,
-    slippingBridle: true,    // verified friction bridle — cannot overwind
+    reserveHours: 36,
+    revHours: 8,
   },
-  hammerForkWheelTeeth: 21,  // saw-tooth wheel (verified "like a circular saw")
-  strikeRateHz: 25.0,        // authentic high-speed mechanical hammer flutter (25 Hz)
-  alarmMinDurationSeconds: 20,
 
-  // hour-wheel lug / alarm-wheel slot release (verified mechanism)
-  alarmSlotHalfWidthRad: (2.2 * Math.PI) / 180, // slot ≈ 4.4° → release window ≈ ±8 min ✓
-  hourWheelAxialDrop: 1.6, // mm — axial drop of hour wheel into the slot
+  motionWorks: {
+    cannonPinionTeeth: 12,
+    minuteWheelTeeth: 36,
+    minuteWheelPinion: 8,
+    hourWheelTeeth: 32,
+  },
+
+  alarmBarrel: {
+    fullTurns: 2.2,
+    maxTorque: 1.0,
+    wheelTeeth: 96,
+    pinion: 12,
+    slippingBridle: true,
+  },
+  hammerForkWheelTeeth: 14,
+  strikeRateHz: 25.0,
+  alarmMinDurationSeconds: 15,
+
+  alarmSlotHalfWidthRad: (2.5 * Math.PI) / 180,
+  hourWheelAxialDrop: 1.6,
 } as const;
 
 export const TRAIN_RATIO_CHECK = (() => {
@@ -110,8 +89,8 @@ export const TRAIN_RATIO_CHECK = (() => {
     (t.third.wheelTeeth / t.fourth.pinion) *
     (t.fourth.wheelTeeth / t.escape.pinion);
   return {
-    centerToEscape, // must equal 600
-    escapeRevSeconds: 3600 / centerToEscape, // must equal 6
-    toothPeriod: 3600 / centerToEscape / SPEC.escapeWheelTeeth, // must equal 0.4
+    centerToEscape,
+    escapeRevSeconds: 3600 / centerToEscape,
+    toothPeriod: 3600 / centerToEscape / SPEC.escapeWheelTeeth,
   };
 })();

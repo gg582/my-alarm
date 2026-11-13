@@ -68,6 +68,89 @@ export function pinionOutline(leaves: number, radius: number): [number, number][
   return gearOutline(leaves, radius, radius * 0.45);
 }
 
+function mergeMeshes(parts: MeshData[]): MeshData {
+  const vertices: number[] = [];
+  const indices: number[] = [];
+  for (const part of parts) {
+    const offset = vertices.length / 6;
+    vertices.push(...part.vertices);
+    for (const index of part.indices) indices.push(offset + index);
+  }
+  return { vertices: new Float32Array(vertices), indices: new Uint32Array(indices) };
+}
+
+function transformedMesh(data: MeshData, angle: number, x: number, y: number, z: number): MeshData {
+  const vertices = new Float32Array(data.vertices);
+  const c = Math.cos(angle), s = Math.sin(angle);
+  for (let i = 0; i < vertices.length; i += 6) {
+    const px = vertices[i], py = vertices[i + 1];
+    const nx = vertices[i + 3], ny = vertices[i + 4];
+    vertices[i] = c * px - s * py + x;
+    vertices[i + 1] = s * px + c * py + y;
+    vertices[i + 2] += z;
+    vertices[i + 3] = c * nx - s * ny;
+    vertices[i + 4] = s * nx + c * ny;
+  }
+  return { vertices, indices: data.indices };
+}
+
+function toothedRingMesh(outline: [number, number][], innerRadius: number, z0: number, z1: number): MeshData {
+  const n = outline.length;
+  const inner = outline.map(([x, y]) => {
+    const scale = innerRadius / Math.hypot(x, y);
+    return [x * scale, y * scale] as [number, number];
+  });
+  const vertices: number[] = [];
+  const indices: number[] = [];
+  for (let i = 0; i < n; i++) {
+    const j = (i + 1) % n;
+    const [ox0, oy0] = outline[i], [ox1, oy1] = outline[j];
+    const [ix0, iy0] = inner[i], [ix1, iy1] = inner[j];
+    let base = vertices.length / 6;
+    vertices.push(ox0, oy0, z1, 0, 0, 1, ox1, oy1, z1, 0, 0, 1, ix1, iy1, z1, 0, 0, 1, ix0, iy0, z1, 0, 0, 1);
+    indices.push(base, base + 1, base + 2, base, base + 2, base + 3);
+    base = vertices.length / 6;
+    vertices.push(ox0, oy0, z0, 0, 0, -1, ix0, iy0, z0, 0, 0, -1, ix1, iy1, z0, 0, 0, -1, ox1, oy1, z0, 0, 0, -1);
+    indices.push(base, base + 1, base + 2, base, base + 2, base + 3);
+    const length = Math.hypot(ox1 - ox0, oy1 - oy0) || 1;
+    const nx = (oy1 - oy0) / length, ny = -(ox1 - ox0) / length;
+    base = vertices.length / 6;
+    vertices.push(ox0, oy0, z0, nx, ny, 0, ox1, oy1, z0, nx, ny, 0, ox1, oy1, z1, nx, ny, 0, ox0, oy0, z1, nx, ny, 0);
+    indices.push(base, base + 1, base + 2, base, base + 2, base + 3);
+    base = vertices.length / 6;
+    vertices.push(ix0, iy0, z0, -nx, -ny, 0, ix0, iy0, z1, -nx, -ny, 0, ix1, iy1, z1, -nx, -ny, 0, ix1, iy1, z0, -nx, -ny, 0);
+    indices.push(base, base + 1, base + 2, base, base + 2, base + 3);
+  }
+  return { vertices: new Float32Array(vertices), indices: new Uint32Array(indices) };
+}
+
+/** Open five-spoke brass wheel used in the early all-metal going train. */
+export function spokedGearMesh(
+  teeth: number, pitchRadius: number, toothHeight: number,
+  z0: number, z1: number, spokes = 5,
+): MeshData {
+  const outline = gearOutline(teeth, pitchRadius, toothHeight);
+  const innerRadius = (pitchRadius - toothHeight * 0.55) * 0.82;
+  const hubRadius = Math.max(1.1, pitchRadius * 0.16);
+  const parts: MeshData[] = [
+    toothedRingMesh(outline, innerRadius, z0, z1),
+    disc(hubRadius, z0, z1, 24),
+  ];
+  const spokeLength = innerRadius - hubRadius + 0.8;
+  for (let i = 0; i < spokes; i++) {
+    const angle = (i / spokes) * Math.PI * 2;
+    const middle = hubRadius + spokeLength / 2 - 0.4;
+    parts.push(transformedMesh(
+      box(Math.max(0.55, pitchRadius * 0.065), spokeLength, z1 - z0),
+      angle - Math.PI / 2,
+      Math.cos(angle) * middle,
+      Math.sin(angle) * middle,
+      (z0 + z1) / 2,
+    ));
+  }
+  return mergeMeshes(parts);
+}
+
 /** Swiss lever escape wheel: 15 club teeth with impulse plane (verified conventional form) */
 export function escapeWheelOutline(teeth: number, radius: number): [number, number][] {
   const pts: [number, number][] = [];
@@ -203,112 +286,38 @@ export function hairspringIndices(segments: number): Uint32Array<ArrayBuffer> {
   return idx;
 }
 
-// ---------- authentic Slava 5671 clock hands & dial meshes ----------
+// ---------- early all-metal Slava 5671 hands & dial meshes ----------
 
-/** Vintage tapered sword hour hand (часовая стрелка) */
-export function hourHandMesh(length = 16.5, z0 = 0, z1 = 0.4): MeshData {
-  const pts: [number, number][] = [];
-  const bossR = 1.8;
-  const segments = 16;
-  // Circular boss around center arbor (from -120° to 120°)
-  for (let i = 0; i <= segments; i++) {
-    const a = -Math.PI * 0.65 + (i / segments) * Math.PI * 1.3;
-    pts.push([bossR * Math.sin(a), -bossR * Math.cos(a)]);
-  }
-  // Tapered sword blade toward 12 o'clock (+Y)
-  pts.push([0.9, length * 0.2]);
-  pts.push([0.7, length * 0.85]);
-  pts.push([0, length]); // tip
-  pts.push([-0.7, length * 0.85]);
-  pts.push([-0.9, length * 0.2]);
-  return extrudeProfile(pts, z0, z1);
+function flatHandMesh(length: number, width: number, tail: number, z0: number, z1: number): MeshData {
+  return extrudeProfile([
+    [-width * 0.65, -tail],
+    [width * 0.65, -tail],
+    [width * 0.65, length * 0.2],
+    [width * 0.42, length * 0.86],
+    [0, length],
+    [-width * 0.42, length * 0.86],
+    [-width * 0.65, length * 0.2],
+  ], z0, z1);
 }
 
-/** Slender minute hand (минутная стрелка) */
-export function minuteHandMesh(length = 23.5, z0 = 0, z1 = 0.35): MeshData {
-  const pts: [number, number][] = [];
-  const bossR = 1.4;
-  const segments = 16;
-  for (let i = 0; i <= segments; i++) {
-    const a = -Math.PI * 0.7 + (i / segments) * Math.PI * 1.4;
-    pts.push([bossR * Math.sin(a), -bossR * Math.cos(a)]);
-  }
-  pts.push([0.65, length * 0.2]);
-  pts.push([0.45, length * 0.9]);
-  pts.push([0, length]); // tip
-  pts.push([-0.45, length * 0.9]);
-  pts.push([-0.65, length * 0.2]);
-  return extrudeProfile(pts, z0, z1);
+/** Flat, pointed blued-steel hour hand (часовая стрелка). */
+export function hourHandMesh(length = 16.5, z0 = 0, z1 = 0.22): MeshData {
+  return flatHandMesh(length, 1.45, 1.5, z0, z1);
 }
 
-/** Soviet signature red needle second hand with counterweight disc (секундная стрелка) */
-export function secondHandMesh(length = 24.5, tail = 6.0, z0 = 0, z1 = 0.25): MeshData {
-  const pts: [number, number][] = [];
-  const w = 0.22;
-  // needle tip
-  pts.push([0, length]);
-  pts.push([w, length * 0.2]);
-  pts.push([w, 0.8]);
-  // center boss
-  pts.push([0.75, 0]);
-  pts.push([w, -1.0]);
-  // tail counterweight disc
-  const cwY = -tail * 0.6;
-  const cwR = 1.2;
-  for (let i = 0; i <= 10; i++) {
-    const a = -Math.PI / 2 + (i / 10) * Math.PI;
-    pts.push([cwR * Math.cos(a), cwY + cwR * Math.sin(a)]);
-  }
-  pts.push([w, -tail]);
-  pts.push([-w, -tail]);
-  for (let i = 0; i <= 10; i++) {
-    const a = Math.PI / 2 + (i / 10) * Math.PI;
-    pts.push([cwR * Math.cos(a), cwY + cwR * Math.sin(a)]);
-  }
-  pts.push([-w, -1.0]);
-  pts.push([-0.75, 0]);
-  pts.push([-w, 0.8]);
-  pts.push([-w, length * 0.2]);
-  return extrudeProfile(pts, z0, z1);
+/** Matching long blued-steel minute hand (минутная стрелка). */
+export function minuteHandMesh(length = 23.5, z0 = 0, z1 = 0.2): MeshData {
+  return flatHandMesh(length, 1.0, 1.5, z0, z1);
 }
 
-/** Slava spear-tipped alarm hand (сигнальная стрелка) */
-export function alarmHandMesh(length = 18.0, z0 = 0, z1 = 0.35): MeshData {
-  const pts: [number, number][] = [];
-  const bossR = 1.6;
-  const segments = 14;
-  for (let i = 0; i <= segments; i++) {
-    const a = -Math.PI * 0.65 + (i / segments) * Math.PI * 1.3;
-    pts.push([bossR * Math.sin(a), -bossR * Math.cos(a)]);
-  }
-  // thin neck
-  pts.push([0.35, length * 0.65]);
-  // spear diamond head
-  pts.push([1.4, length * 0.78]);
-  pts.push([0, length]); // arrow tip
-  pts.push([-1.4, length * 0.78]);
-  pts.push([-0.35, length * 0.65]);
-  return extrudeProfile(pts, z0, z1);
-}
-
-/** Demonstration Dial Chapter Ring (циферблат с делениями) */
-export function dialRingMesh(rInner = 20.0, rOuter = 26.5, z0 = 0, z1 = 0.5): MeshData {
-  const segs = 96;
-  const verts: number[] = [];
-  const idx: number[] = [];
-  for (let i = 0; i <= segs; i++) {
-    const a = (i / segs) * Math.PI * 2;
-    const c = Math.cos(a), s = Math.sin(a);
-    const base = verts.length / 6;
-    verts.push(rOuter * c, rOuter * s, z1, 0, 0, 1);
-    verts.push(rInner * c, rInner * s, z1, 0, 0, 1);
-    verts.push(rOuter * c, rOuter * s, z0, 0, 0, -1);
-    verts.push(rInner * c, rInner * s, z0, 0, 0, -1);
-    if (i < segs) {
-      const n0 = base, n1 = base + 1, n2 = base + 4, n3 = base + 5;
-      idx.push(n0, n2, n1, n1, n2, n3);
-    }
-  }
-  return { vertices: new Float32Array(verts), indices: new Uint32Array(idx) };
+/** Plain tapered brass alarm needle, without a seconds-hand counterweight. */
+export function alarmHandMesh(length = 22.0, z0 = 0, z1 = 0.2): MeshData {
+  return extrudeProfile([
+    [-0.65, -1.3],
+    [0.65, -1.3],
+    [0.3, length * 0.55],
+    [0, length],
+    [-0.3, length * 0.55],
+  ], z0, z1);
 }
 

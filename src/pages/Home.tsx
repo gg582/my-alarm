@@ -72,7 +72,7 @@ export default function Home() {
     time: '10:08:00',
     alarm: '07:00',
     amp: 240,
-    timeTurns: 6.0,
+    timeTurns: 3.0,
     alarmTurns: 1.8,
     ringing: false,
     beats: 0,
@@ -1153,7 +1153,6 @@ function InteractiveDial({ lang, snapRef, size = 95, dragTarget = 'alarm', onDra
       setHand('dial-h', s.hourHandAngle, 22);
       setHand('dial-m', s.minuteHandAngle, 34);
       setHand('dial-a', s.alarmHandAngle, 30);
-      setHand('dial-s', s.secondHandAngle, 36);
     };
     raf = requestAnimationFrame(loop);
     return () => cancelAnimationFrame(raf);
@@ -1193,14 +1192,14 @@ function InteractiveDial({ lang, snapRef, size = 95, dragTarget = 'alarm', onDra
     isDraggingRef.current = false;
   };
 
-  const ticks = Array.from({ length: 12 }, (_, i) => {
-    const a = (i / 12) * Math.PI * 2;
-    const isMajor = i % 3 === 0;
+  const ticks = Array.from({ length: 60 }, (_, i) => {
+    const a = (i / 60) * Math.PI * 2;
+    const isMajor = i % 5 === 0;
     return {
-      x1: 50 + Math.cos(a) * (isMajor ? 38 : 41),
-      y1: 50 + Math.sin(a) * (isMajor ? 38 : 41),
-      x2: 50 + Math.cos(a) * 45,
-      y2: 50 + Math.sin(a) * 45,
+      x1: 50 + Math.cos(a) * (isMajor ? 39 : 43),
+      y1: 50 + Math.sin(a) * (isMajor ? 39 : 43),
+      x2: 50 + Math.cos(a) * 46,
+      y2: 50 + Math.sin(a) * 46,
       major: isMajor,
     };
   });
@@ -1212,14 +1211,14 @@ function InteractiveDial({ lang, snapRef, size = 95, dragTarget = 'alarm', onDra
         width={size}
         height={size}
         viewBox="0 0 100 100"
-        className="shrink-0 rounded-full bg-neutral-900 border-2 border-neutral-700/80 cursor-crosshair shadow-inner touch-none active:scale-95 transition-transform"
+        className="shrink-0 rounded-full bg-[#e9e5d6] border-2 border-[#8c8570] cursor-crosshair shadow-inner touch-none active:scale-95 transition-transform"
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
         onPointerCancel={handlePointerUp}
       >
         {/* Dial Face circle */}
-        <circle cx="50" cy="50" r="48" fill="#17191e" stroke="#26282e" strokeWidth="1.5" />
+        <circle cx="50" cy="50" r="48" fill="#e9e5d6" stroke="#9d998b" strokeWidth="1" />
 
         {/* Ticks */}
         {ticks.map((t, i) => (
@@ -1229,62 +1228,71 @@ function InteractiveDial({ lang, snapRef, size = 95, dragTarget = 'alarm', onDra
             y1={t.y1}
             x2={t.x2}
             y2={t.y2}
-            stroke={t.major ? '#fbbf24' : '#6b7280'}
-            strokeWidth={t.major ? '2.5' : '1.5'}
+            stroke={t.major ? '#4a4b48' : '#85847b'}
+            strokeWidth={t.major ? '1.6' : '0.7'}
             strokeLinecap="round"
           />
         ))}
 
-        {/* Alarm Hand (Cyan) */}
+        {(['12', '3', '6', '9'] as const).map((label, i) => {
+          const a = i * Math.PI / 2;
+          return (
+            <text
+              key={label}
+              x={50 + Math.sin(a) * 34}
+              y={54 + -Math.cos(a) * 34}
+              textAnchor="middle"
+              fontFamily="Arial, sans-serif"
+              fontSize="13"
+              fontWeight="300"
+              fill="#303431"
+            >
+              {label}
+            </text>
+          );
+        })}
+        <text x="50" y="36" textAnchor="middle" fontFamily="Arial, sans-serif" fontSize="4.2" fill="#555850">SLAVA</text>
+        <text x="50" y="66" textAnchor="middle" fontFamily="Arial, sans-serif" fontSize="3.2" fill="#555850">11 JEWELS</text>
+        <text x="50" y="88" textAnchor="middle" fontFamily="Arial, sans-serif" fontSize="2.6" fill="#555850">MADE IN USSR</text>
+
+        {/* Brass Alarm Hand */}
         <line
           id="dial-a"
           x1="50"
           y1="50"
           x2="50"
           y2="20"
-          stroke="#0ea5e9"
-          strokeWidth="3"
+          stroke="#b08d3e"
+          strokeWidth="1.5"
           strokeLinecap="round"
         />
 
-        {/* Hour Hand (Brass/White) */}
+        {/* Blued Steel Hour Hand */}
         <line
           id="dial-h"
           x1="50"
           y1="50"
           x2="50"
           y2="28"
-          stroke="#f3f4f6"
-          strokeWidth="4"
+          stroke="#203b61"
+          strokeWidth="2.8"
           strokeLinecap="round"
         />
 
-        {/* Minute Hand (White) */}
+        {/* Blued Steel Minute Hand */}
         <line
           id="dial-m"
           x1="50"
           y1="50"
           x2="50"
           y2="16"
-          stroke="#d1d5db"
-          strokeWidth="2.5"
+          stroke="#203b61"
+          strokeWidth="1.8"
           strokeLinecap="round"
         />
 
-        {/* Second Hand (Soviet Red) */}
-        <line
-          id="dial-s"
-          x1="50"
-          y1="50"
-          x2="50"
-          y2="14"
-          stroke="#ef4444"
-          strokeWidth="1.5"
-          strokeLinecap="round"
-        />
-
-        {/* Center Cap */}
-        <circle cx="50" cy="50" r="3.5" fill="#f59e0b" stroke="#92400e" strokeWidth="1" />
+        {/* Brass Center Cap */}
+        <circle cx="50" cy="50" r="2.6" fill="#b08d3e" stroke="#6e5528" strokeWidth="0.8" />
       </svg>
       <div className="text-[9px] text-center text-neutral-400 mt-1 font-mono">
         {dragTarget === 'alarm' ? t.svgDragAlarm : t.svgDragTime}

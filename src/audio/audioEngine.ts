@@ -118,7 +118,7 @@ export class Slava5671AudioEngine {
     const amp = Math.max(0.25, Math.min(1.0, velocity));
 
     // ---- 1. Brass Bell Resonant Partial Cluster (Acoustic Cup Modes) ----
-    // Frequencies modeled from 56mm stamped brass/steel alarm bell cup
+    // Frequencies modeled from the 55.8mm movement's stamped-steel back-cover bell
     const partials = [
       { f: 580, g: 0.70, d: 0.22, modF: 890, modIdx: 850 },   // Deep brass body + chime FM (D5)
       { f: 890, g: 0.85, d: 0.18, modF: 1340, modIdx: 600 },  // Primary bell chime overtone (A5)

@@ -16,7 +16,7 @@
  *   friction slipping bridle (winding clamps at full turns instead of breaking).
  * · Alarm: hour-wheel lug under axial spring tension drops into the alarm-wheel slot when
  *   the (wrapped) angle between current time and alarm time enters the slot window
- *   (≈ ±8 min, per factory tolerance), releasing the hammer; the hammer-fork saw wheel
+ *   (±5 min, per the 1987 repair manual), releasing the hammer; the hammer-fork saw wheel
  *   then oscillates the hammer against the bell at the strike rate, emitting discrete
  *   strike events with contact velocity — hammer "rest" intervals model lift damping.
  */
@@ -49,7 +49,6 @@ export interface SimSnapshot {
 
   minuteHandAngle: number;   // rad, 0 = 12 o'clock
   hourHandAngle: number;
-  secondHandAngle: number;
   alarmHandAngle: number;
 
   timeBarrelTurns: number;
@@ -94,7 +93,7 @@ export class Slava5671Physics {
   private lastBeatDir = 1;
 
   // ---- barrels ----
-  private timeTurns = 6.0;      // pre-wound (~24h reserve) so movement runs immediately
+  private timeTurns = 3.0;      // pre-wound (~24h reserve) so movement runs immediately
   private alarmTurns = 1.8;     // pre-wound alarm spring
 
   // ---- time ----
@@ -271,7 +270,7 @@ export class Slava5671Physics {
       const strikeRate = SPEC.strikeRateHz * (0.55 + 0.45 * Math.sqrt(torque));
       // saw wheel advances one half-tooth per hammer swing
       this.alarmWheelAngle += (Math.PI / SPEC.hammerForkWheelTeeth) * 2 * strikeRate * dt;
-      this.alarmTurns = Math.max(0, this.alarmTurns - dt * (SPEC.alarmBarrel.fullTurns / 24)); // ~24 s at full wind (≥20 s spec)
+      this.alarmTurns = Math.max(0, this.alarmTurns - dt * (SPEC.alarmBarrel.fullTurns / 20));
 
       if (this.hammerRestTimer > 0) {
         // hammer head lies on the bell — bell is damped (hammer-lift damping)
@@ -327,7 +326,6 @@ export class Slava5671Physics {
     const barrel = -center / SPEC.barrelToCenterRatio;
     const minuteHand = (this.timeMinutes() / 60) * TAU;
     const hourHand = (this.timeMinutes() / 720) * TAU;
-    const secondHand = (((this.timeMinutes() * 60) % 60) / 60) * TAU;
     const snap: SimSnapshot = {
       simTime: this.simTime,
       running: this.timeTurns > 1e-4,
@@ -345,7 +343,6 @@ export class Slava5671Physics {
       minuteWheelAngle: -(center / 3),
       minuteHandAngle: minuteHand,
       hourHandAngle: hourHand,
-      secondHandAngle: secondHand,
       alarmHandAngle: (this.alarmMin / 720) * TAU,
       timeBarrelTurns: this.timeTurns,
       timeBarrelTorque: this.timeTorque(),

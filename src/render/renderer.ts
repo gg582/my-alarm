@@ -17,8 +17,8 @@ import {
   extrudeProfile, gearOutline, pinionOutline, escapeWheelMesh,
   sawWheelOutline, lathe, box, disc, hairspringVertices, hairspringIndices,
   spokedGearMesh, hourHandMesh, minuteHandMesh, alarmHandMesh,
-  roundedPlateMesh, flatBarMesh, palletForkMesh, palletStonesMesh, balanceCockMesh,
-  alarmGuardMesh, hammerForkMesh,
+  flatBarMesh, palletForkMesh, palletStonesMesh, balanceCockMesh,
+  alarmGuardMesh, hammerForkMesh, perforatedPlateMesh, ringMesh,
 } from './meshes';
 import type { MeshData } from './meshes';
 import type { SimSnapshot, SimEvent } from '../sim/physics';
@@ -543,12 +543,22 @@ export class Slava5671Renderer {
     this.addObject(disc(0.22, 2.4, 4.1, 16), MAT.brassBright, forkP, () => [0, 0], [3.65, -3.85, 0]);
 
     const palletBridge: [number, number][] = [
-      [-1.8, 2.8], [-0.8, 3.6], [0.4, 3.3], [1.1, 2.4], [1.8, 0.4],
-      [1.7, -1.7], [0.6, -2.5], [-0.8, -2.1], [-1.6, -0.8],
+      [-3.0, 2.6], [-2.75, 3.45], [-1.9, 3.8], [-1.0, 3.45], [-0.25, 2.55],
+      [0.8, 1.45], [1.35, 0.65], [1.4, -0.2], [0.85, -0.95], [-0.1, -1.55],
+      [-0.85, -3.2], [-1.45, -4.0], [-2.35, -3.55], [-2.8, -2.2], [-2.65, -0.65],
+      [-2.9, 0.85],
     ];
-    this.addObject(roundedPlateMesh(palletBridge, 4.9, 5.55), MAT.nickelPlate, forkP);
-    this.addObject(disc(0.65, 5.5, 5.9, 24), MAT.steel, forkP, () => [0, 0], [0.8, -1.4, 0]);
-    this.addObject(disc(0.6, 5.5, 5.9, 24), MAT.steel, forkP, () => [0, 0], [-0.7, 2.4, 0]);
+    this.addObject(perforatedPlateMesh(palletBridge, [
+      { x: 0, y: 0, radius: 0.52 },
+      { x: -2.0, y: 2.8, radius: 0.58 },
+      { x: -1.4, y: -2.55, radius: 0.58 },
+    ], 4.9, 5.55), MAT.nickelPlate, forkP);
+    this.addObject(ringMesh(0.82, 0.48, 5.48, 5.64, 32), MAT.steelSatin, forkP);
+    this.addObject(ringMesh(0.47, 0.16, 5.51, 5.67, 32), MAT.ruby, forkP);
+    for (const [x, y] of [[-2.0, 2.8], [-1.4, -2.55]] as const) {
+      this.addObject(disc(0.82, 5.52, 5.82, 32), MAT.steel, forkP, () => [0, 0], [x, y, 0]);
+      this.addObject(box(1.12, 0.18, 0.08), MAT.dark, forkP, () => [0.35, 0], [x, y, 5.84]);
+    }
 
     // ---------- screwless balance (verified безвинтовый), heavy rim ----------
     const balP: [number, number, number] = [POS.balance[0], POS.balance[1], 0];
@@ -559,7 +569,7 @@ export class Slava5671Renderer {
     // monometallic rim with a single machined crossbar
     this.addObject(flatBarMesh(-6.6, 0, 6.6, 0, 1.3, 1.3, 5.55, 6.45), MAT.brassBright, balP, balAnim);
     // staff
-    this.addObject(disc(0.5, 3.2, 9.6, 16), MAT.steel, balP, balAnim);
+    this.addObject(disc(0.5, 3.2, 9.05, 16), MAT.steel, balP, balAnim);
     // double roller + ruby impulse jewel (ellipse)
     this.addObject(disc(1.7, 4.2, 5.2, 24), MAT.steelSatin, balP, balAnim);
     this.addObject(disc(0.38, 4.0, 5.4, 10), MAT.ruby, balP, balAnim, [1.35, 0, 0]);
@@ -590,32 +600,53 @@ export class Slava5671Renderer {
 
     // ---------- early two-ear balance cock with a screwed staff ----------
     this.addObject(balanceCockMesh(), MAT.nickelPlate, balP);
-    this.addObject(disc(0.72, 8.55, 8.85, 24), MAT.ruby, balP);
-    this.addObject(disc(0.36, 8.8, 9.35, 20), MAT.steel, balP);
-    this.addObject(disc(0.65, 8.6, 9.0, 24), MAT.steel, balP, () => [0, 0], [-6.2, 3.7, 0]);
-    this.addObject(disc(0.65, 8.6, 9.0, 24), MAT.steel, balP, () => [0, 0], [1.0, -6.4, 0]);
+    this.addObject(ringMesh(0.9, 0.52, 8.58, 8.76, 40), MAT.steelSatin, balP);
+    this.addObject(ringMesh(0.51, 0.17, 8.6, 8.74, 32), MAT.ruby, balP);
+    this.addObject(disc(0.41, 8.76, 8.86, 32), MAT.ruby, balP);
+    this.addObject(disc(0.2, 8.86, 9.12, 20), MAT.steel, balP);
+    for (const [x, y] of [[-6.2, 3.7], [1.0, -6.4]] as const) {
+      this.addObject(disc(0.9, 8.62, 8.94, 32), MAT.steel, balP, () => [0, 0], [x, y, 0]);
+      this.addObject(box(1.25, 0.2, 0.08), MAT.dark, balP, () => [0.35, 0], [x, y, 8.96]);
+    }
 
     // ---------- nickel-plated train and alarm bridges ----------
     const bridgeZ = 5.2;
+    const trainScrews = [[-20, 15], [-16, 3], [-5, 18], [7, 10], [-5.6, -13.3]] as const;
+    const alarmScrews = [[18, 19], [22, 7], [18, -7]] as const;
     const trainBridge: [number, number][] = [
-      [-25, 12], [-24, 19], [-18, 23], [-10, 24], [-3, 22], [4, 18],
-      [10, 13], [13, 8], [10, 5], [5, 4], [2, 1], [1, -4],
-      [-2, -10], [-5, -12], [-8, -10], [-10, -5], [-15, -1], [-21, 3], [-24, 7],
+      [-24.5, 12], [-23.5, 19], [-18, 23], [-10, 24], [-3, 22], [4, 18],
+      [10, 13], [12.5, 8], [10.5, 4.2], [5, 3.4], [2, 1], [1, -4],
+      [-1.5, -9], [-3.2, -13.5], [-5.4, -15.2], [-7.5, -13.7], [-8.5, -10.5],
+      [-10, -5], [-15, -1], [-21, 3], [-24, 7],
     ];
-    this.addObject(roundedPlateMesh(trainBridge, bridgeZ, bridgeZ + 1.2), MAT.nickelPlate, [0, 0, 0]);
+    this.addObject(perforatedPlateMesh(trainBridge, [
+      { x: POS.barrel[0], y: POS.barrel[1], radius: 0.85 },
+      { x: POS.center[0], y: POS.center[1], radius: 0.65 },
+      { x: POS.third[0], y: POS.third[1], radius: 0.58 },
+      { x: POS.fourth[0], y: POS.fourth[1], radius: 0.58 },
+      { x: POS.escape[0], y: POS.escape[1], radius: 0.52 },
+      ...trainScrews.map(([x, y]) => ({ x, y, radius: 0.62 })),
+    ], bridgeZ, bridgeZ + 1.2), MAT.nickelPlate, [0, 0, 0]);
     const alarmBridge: [number, number][] = [
       [10, 22], [18, 23], [24, 18], [26, 10], [25, 5], [22, 3],
-      [20, 5], [19, 9], [17, 12], [15, 10], [16, 5], [18, 1],
-      [22, -4], [22, -8], [18, -12], [14, -10], [13, -4], [16, 3], [13, 10], [9, 15],
+      [20, 5], [20, 9], [18, 12], [17, 10], [18, 5], [20, 1],
+      [22, -4], [22, -8], [18, -12], [14, -10], [11.5, -7], [12, -4],
+      [16, 3], [13, 10], [9, 15],
     ];
-    this.addObject(roundedPlateMesh(alarmBridge, bridgeZ, bridgeZ + 1.2), MAT.nickelPlate, [0, 0, 0]);
-    // pivot jewels in the train (brass bushings — train unjewelled, verified) rendered as bushings
+    this.addObject(perforatedPlateMesh(alarmBridge, [
+      { x: POS.alarmBarrel[0], y: POS.alarmBarrel[1], radius: 0.9 },
+      { x: POS.saw[0], y: POS.saw[1], radius: 0.62 },
+      { x: POS.hammer[0], y: POS.hammer[1], radius: 0.58 },
+      ...alarmScrews.map(([x, y]) => ({ x, y, radius: 0.62 })),
+    ], bridgeZ, bridgeZ + 1.2), MAT.nickelPlate, [0, 0, 0]);
     for (const p of [POS.barrel, POS.center, POS.third, POS.fourth]) {
-      this.addObject(disc(1.0, bridgeZ + 0.5, bridgeZ + 1.1, 16), MAT.brassBright, [p[0], p[1], 0]);
+      this.addObject(ringMesh(0.92, 0.3, bridgeZ + 1.14, bridgeZ + 1.34, 32), MAT.brassBright, [p[0], p[1], 0]);
     }
-    // escape & fork arbors run in jewels (verified)
-    this.addObject(disc(0.9, 4.6, 5.2, 16), MAT.ruby, [POS.escape[0], POS.escape[1], 0]);
-    this.addObject(disc(0.9, 4.6, 5.2, 16), MAT.ruby, forkP);
+    for (const p of [POS.alarmBarrel, POS.saw, POS.hammer]) {
+      this.addObject(ringMesh(0.82, 0.27, bridgeZ + 1.14, bridgeZ + 1.34, 32), MAT.brassBright, [p[0], p[1], 0]);
+    }
+    this.addObject(ringMesh(0.82, 0.48, bridgeZ + 1.08, bridgeZ + 1.24, 32), MAT.steelSatin, [POS.escape[0], POS.escape[1], 0]);
+    this.addObject(ringMesh(0.47, 0.16, bridgeZ + 1.11, bridgeZ + 1.27, 32), MAT.ruby, [POS.escape[0], POS.escape[1], 0]);
 
     // ---------- hour wheel + alarm wheel release assembly (exposition, dial side) ----------
     // hour wheel with lug (усик), axial spring tension; drops into alarm wheel slot
@@ -676,9 +707,9 @@ export class Slava5671Renderer {
     }
 
     // ---------- polished slotted bridge screws ----------
-    for (const [sx, sy] of [[-20, 15], [-16, 3], [-5, 18], [7, 10], [-4, -7], [18, 19], [22, 7], [18, -7]] as const) {
-      this.addObject(disc(1.25, 6.4, 6.7, 24), MAT.steel, [sx, sy, 0]);
-      this.addObject(box(1.55, 0.24, 0.1), MAT.dark, [sx, sy, 0], () => [0.35, 0], [0, 0, 6.72]);
+    for (const [sx, sy] of [...trainScrews, ...alarmScrews]) {
+      this.addObject(disc(0.95, 6.38, 6.68, 32), MAT.steel, [sx, sy, 0]);
+      this.addObject(box(1.3, 0.2, 0.08), MAT.dark, [sx, sy, 0], () => [0.35, 0], [0, 0, 6.7]);
     }
   }
 

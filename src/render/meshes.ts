@@ -114,7 +114,7 @@ export function plateMesh(outline: [number, number][], z0: number, z1: number): 
   return { vertices: new Float32Array(vertices), indices: new Uint32Array(indices) };
 }
 
-export function roundedPlateMesh(outline: [number, number][], z0: number, z1: number, iterations = 2): MeshData {
+function roundedOutline(outline: [number, number][], iterations: number): [number, number][] {
   let points = outline;
   for (let pass = 0; pass < iterations; pass++) {
     const rounded: [number, number][] = [];
@@ -126,7 +126,103 @@ export function roundedPlateMesh(outline: [number, number][], z0: number, z1: nu
     }
     points = rounded;
   }
-  return plateMesh(points, z0, z1);
+  return points;
+}
+
+export function roundedPlateMesh(outline: [number, number][], z0: number, z1: number, iterations = 2): MeshData {
+  return plateMesh(roundedOutline(outline, iterations), z0, z1);
+}
+
+export interface PlateHole {
+  x: number;
+  y: number;
+  radius: number;
+}
+
+export function perforatedPlateMesh(
+  outline: [number, number][], holes: PlateHole[], z0: number, z1: number, iterations = 2,
+): MeshData {
+  const outer = roundedOutline(polygonArea(outline) < 0 ? [...outline].reverse() : outline, iterations);
+  const holeOutlines = holes.map(({ x, y, radius }) => {
+    const points: [number, number][] = [];
+    for (let i = 0; i < 24; i++) {
+      const angle = -(i / 24) * Math.PI * 2;
+      points.push([x + Math.cos(angle) * radius, y + Math.sin(angle) * radius]);
+    }
+    return points;
+  });
+  const vertices: number[] = [];
+  const indices: number[] = [];
+
+  const addWalls = (points: [number, number][]) => {
+    for (let i = 0; i < points.length; i++) {
+      const [x0, y0] = points[i];
+      const [x1, y1] = points[(i + 1) % points.length];
+      const length = Math.hypot(x1 - x0, y1 - y0) || 1;
+      const nx = (y1 - y0) / length, ny = -(x1 - x0) / length;
+      const base = vertices.length / 6;
+      vertices.push(x0, y0, z0, nx, ny, 0, x1, y1, z0, nx, ny, 0, x1, y1, z1, nx, ny, 0, x0, y0, z1, nx, ny, 0);
+      indices.push(base, base + 1, base + 2, base, base + 2, base + 3);
+    }
+  };
+  addWalls(outer);
+  for (const hole of holeOutlines) addWalls(hole);
+
+  const crossings = (points: [number, number][], x: number): number[] => {
+    const result: number[] = [];
+    for (let i = 0; i < points.length; i++) {
+      const [x0, y0] = points[i];
+      const [x1, y1] = points[(i + 1) % points.length];
+      if ((x < x0 && x < x1) || (x >= x0 && x >= x1) || x0 === x1) continue;
+      result.push(y0 + ((x - x0) / (x1 - x0)) * (y1 - y0));
+    }
+    return result.sort((a, b) => a - b);
+  };
+  const materialIntervals = (x: number): [number, number][] => {
+    const outerY = crossings(outer, x);
+    const result: [number, number][] = [];
+    for (let i = 0; i + 1 < outerY.length; i += 2) {
+      let intervals: [number, number][] = [[outerY[i], outerY[i + 1]]];
+      for (const hole of holeOutlines) {
+        const holeY = crossings(hole, x);
+        if (holeY.length < 2) continue;
+        const cut: [number, number] = [holeY[0], holeY[holeY.length - 1]];
+        const next: [number, number][] = [];
+        for (const [a, b] of intervals) {
+          if (cut[1] <= a || cut[0] >= b) next.push([a, b]);
+          else {
+            if (cut[0] > a) next.push([a, cut[0]]);
+            if (cut[1] < b) next.push([cut[1], b]);
+          }
+        }
+        intervals = next;
+      }
+      result.push(...intervals);
+    }
+    return result.sort((a, b) => a[0] - b[0]);
+  };
+
+  const eventX = [...outer, ...holeOutlines.flat()].map(([x]) => x).sort((a, b) => a - b);
+  const uniqueX = eventX.filter((x, i) => i === 0 || Math.abs(x - eventX[i - 1]) > 1e-7);
+  for (let i = 0; i + 1 < uniqueX.length; i++) {
+    const inset = Math.min(1e-6, (uniqueX[i + 1] - uniqueX[i]) * 1e-5);
+    const left = materialIntervals(uniqueX[i] + inset);
+    const right = materialIntervals(uniqueX[i + 1] - inset);
+    if (left.length !== right.length) throw new Error(`Unable to tessellate perforated plate at ${uniqueX[i]} (${outline[0][0]},${outline[0][1]}): ${left.length}/${right.length}`);
+    for (let j = 0; j < left.length; j++) {
+      const [low0, high0] = left[j];
+      const [low1, high1] = right[j];
+      if (high0 - low0 < 1e-7 || high1 - low1 < 1e-7) continue;
+      const x0 = uniqueX[i] + inset, x1 = uniqueX[i + 1] - inset;
+      let base = vertices.length / 6;
+      vertices.push(x0, low0, z1, 0, 0, 1, x1, low1, z1, 0, 0, 1, x1, high1, z1, 0, 0, 1, x0, high0, z1, 0, 0, 1);
+      indices.push(base, base + 1, base + 2, base, base + 2, base + 3);
+      base = vertices.length / 6;
+      vertices.push(x0, low0, z0, 0, 0, -1, x0, high0, z0, 0, 0, -1, x1, high1, z0, 0, 0, -1, x1, low1, z0, 0, 0, -1);
+      indices.push(base, base + 1, base + 2, base, base + 2, base + 3);
+    }
+  }
+  return { vertices: new Float32Array(vertices), indices: new Uint32Array(indices) };
 }
 
 // ---------- gear outlines ----------
@@ -464,13 +560,19 @@ export function hammerForkMesh(z0 = 2.8, z1 = 3.35): MeshData {
 }
 
 export function balanceCockMesh(z0 = 8.1, z1 = 8.65): MeshData {
-  return mergeMeshes([
-    ringMesh(2.0, 0.62, z0, z1, 40),
-    flatBarMesh(-1.1, 0.5, -6.2, 3.7, 2.6, 1.7, z0, z1),
-    flatBarMesh(0.2, -1.1, 1.0, -6.4, 2.3, 1.7, z0, z1),
-    transformedMesh(ringMesh(1.45, 0.58, z0, z1, 32), 0, -6.2, 3.7, 0),
-    transformedMesh(ringMesh(1.45, 0.58, z0, z1, 32), 0, 1.0, -6.4, 0),
-  ]);
+  const outline: [number, number][] = [
+    [-7.4, 3.7], [-7.2, 4.8], [-6.3, 5.35], [-5.25, 5.1], [-4.55, 4.15],
+    [-3.75, 2.85], [-2.25, 1.85], [-1.25, 1.55], [0.05, 1.7], [1.25, 1.05],
+    [1.75, -0.1], [1.85, -2.0], [2.45, -4.45], [2.6, -6.0], [2.05, -7.35],
+    [1.0, -7.95], [-0.15, -7.65], [-0.75, -6.75], [-0.85, -5.35], [-0.45, -3.45],
+    [-0.65, -1.85], [-1.45, -0.9], [-2.5, -0.15], [-3.85, 0.85], [-5.1, 1.75],
+    [-6.25, 2.3], [-7.1, 2.75],
+  ];
+  return perforatedPlateMesh(outline, [
+    { x: 0, y: 0, radius: 0.58 },
+    { x: -6.2, y: 3.7, radius: 0.68 },
+    { x: 1.0, y: -6.4, radius: 0.68 },
+  ], z0, z1, 2);
 }
 
 // ---------- early all-metal Slava 5671 hands ----------

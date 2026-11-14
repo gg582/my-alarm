@@ -69,14 +69,21 @@ export function mainplateOutline(radius: number): [number, number][] {
 
 export function alarmWheelPlateOutline(radius: number): [number, number][] {
   const traced: [number, number][] = [
-    [544, 117], [580, 117], [615, 130], [648, 140], [680, 138], [712, 147],
-    [743, 168], [770, 199], [788, 236], [793, 275], [784, 315], [762, 351],
-    [728, 380], [690, 401], [648, 416], [610, 428], [575, 433], [540, 426],
-    [507, 410], [480, 388], [459, 357], [445, 322], [438, 285], [439, 246],
-    [449, 209], [469, 177], [493, 151], [521, 133],
+    [370, 31], [398, 29], [423, 39], [424, 53], [429, 64], [438, 56],
+    [446, 43], [464, 41], [510, 55], [551, 77], [589, 107], [622, 141],
+    [648, 184], [663, 230], [668, 280], [657, 329], [638, 378], [610, 424],
+    [575, 464], [536, 495], [493, 516], [480, 521], [480, 501], [472, 494],
+    [462, 495], [455, 508], [452, 528], [432, 538], [388, 543], [337, 541],
+    [286, 530], [270, 517], [264, 492], [252, 488], [244, 496], [234, 516],
+    [226, 516], [220, 508], [183, 479], [150, 444], [127, 402], [112, 354],
+    [109, 304], [118, 257], [136, 211], [158, 169], [190, 134], [222, 107],
+    [254, 105], [273, 86], [305, 91], [324, 68], [323, 49], [337, 54],
   ];
-  const scale = 0.82 * Math.sqrt(Math.PI * radius * radius / Math.abs(polygonArea(traced)));
-  return traced.map(([x, y]) => [(x - 610) * scale, (260 - y) * scale]);
+  const points = traced.map(([x, y]) => [(x - 389) / 280, (282 - y) / 256] as [number, number]);
+  const scale = radius * 0.94 / Math.max(...points.map(([x, y]) => Math.hypot(x, y)));
+  const angle = 304 * Math.PI / 180;
+  const c = Math.cos(angle), s = Math.sin(angle);
+  return points.map(([x, y]) => [(c * x - s * y) * scale, (s * x + c * y) * scale]);
 }
 
 function triangulateProfile(outline: [number, number][]): number[] {
@@ -572,25 +579,21 @@ export function alarmWheelOutline(teeth: number, radius: number): [number, numbe
 
 export function alarmStopSpringMesh(z0 = 5.85, z1 = 6.15): MeshData {
   return mergeMeshes([
-    flatBarMesh(0, -5.0, 0.25, 5.8, 0.68, 0.55, z0, z1),
-    flatBarMesh(0.25, 5.8, -0.35, 6.6, 0.55, 0.38, z0, z1),
-    flatBarMesh(-0.35, 6.6, -0.85, 6.25, 0.38, 0.3, z0, z1),
-    transformedMesh(box(0.38, 0.65, 0.85), 0, -0.85, 6.25, z0 - 0.425),
+    flatBarMesh(0, -5.0, 0.25, 6.6, 0.68, 0.55, z0, z1),
+    transformedMesh(box(0.38, 0.65, 0.85), 0, 0.25, 6.25, z0 - 0.425),
   ]);
 }
 
 export function alarmGuardMesh(z0 = 4.0, z1 = 4.35): MeshData {
   const outline: [number, number][] = [
-    [1.0, 0.9], [2.3, 1.3], [3.0, 0.8], [3.1, -0.1], [2.2, -0.7],
-    [0.8, -0.9], [-0.3, -2.0], [-1.0, -4.2], [-1.4, -6.1], [-2.0, -7.0],
-    [-3.0, -7.2], [-3.7, -6.6], [-3.5, -5.7], [-2.7, -4.5], [-1.9, -2.4],
-    [-1.2, -0.8], [-0.4, 0.5],
+    [2.8, 1.7], [3.3, 1.2], [3.1, 0.3], [1.6, -0.1], [0.7, -0.6],
+    [-0.3, -0.7], [-0.9, -1.4], [-1.35, -2.5], [-1.96, -3.30], [-2.15, -2.75],
+    [-1.75, -1.8], [-0.6, 0.1], [0.8, 1.0], [1.8, 1.4],
   ];
   return mergeMeshes([
-    roundedPlateMesh(outline, z0, z1, 2),
-    ringMesh(1.05, 0.36, z0, z1, 32),
-    transformedMesh(box(0.38, 1.60, 3.40), 0, -2.7, -6.4, z0 + 1.70),
-    transformedMesh(box(0.55, 0.70, 1.20), 0, -1.8, -5.0, z0 - 0.40),
+    perforatedPlateMesh(outline, [{ x: 0, y: 0, radius: 0.36 }], z0, z1, 2),
+    ringMesh(0.85, 0.36, z0, z1, 32),
+    transformedMesh(box(0.45, 2.10, 3.10), -0.35, 2.75, 0.90, z0 + 1.55),
   ]);
 }
 

@@ -645,7 +645,7 @@ export class Slava5671Renderer {
     ], bridgeZ, bridgeZ + 1.2), MAT.nickelPlate, [0, 0, 0]);
     const alarmBridge: [number, number][] = [
       [8, 13], [8.5, 18], [11, 22], [15, 24], [19, 23], [21.5, 21], [22.5, 18],
-      [21, 15], [18.5, 13], [17.5, 10], [18.5, 8], [20, 9], [23, 8.5],
+      [20, 17], [17.5, 15], [16.3, 12.8], [16.8, 10.8], [18.4, 9.4], [20.5, 10.2], [23, 8.5],
       [24.5, 6], [25, 2], [25, -4], [23, -8], [20, -11], [17, -12.5],
       [14, -11], [12, -8], [11, -4], [10, 0], [8.5, 5],
     ];
@@ -706,13 +706,11 @@ export class Slava5671Renderer {
     this.addObject(disc(0.24, 4.6, 6.3, 20), MAT.steel, alarmSettingP,
       (s) => [-s.alarmHandAngle * 19.5, 0]);
     const stopP: [number, number, number] = [10.2, 5.5, 0];
-    const stopAnim = (s: SimSnapshot): [number, number] => [-s.stopSpringDeflection * 0.04, s.stopSpringDeflection * 0.22];
+    const stopAnim = (s: SimSnapshot): [number, number] => [0, s.stopSpringDeflection * 0.22];
     this.addObject(alarmStopSpringMesh(), MAT.steelSatin, stopP, stopAnim);
     for (const [x, y, length] of [[0.02, -2.8, 1.8], [0.1, -0.7, 1.25]] as const) {
       this.addObject(box(0.24, length, 0.06), MAT.dark, stopP, stopAnim, [x, y, 6.17]);
     }
-    this.addObject(flatBarMesh(10.35, 0.2, 17.1, -3.1, 0.38, 0.3, 4.15, 4.45), MAT.steel,
-      [0, 0, 0], (s) => [-s.stopSpringDeflection * 0.025, s.stopSpringDeflection * 0.22]);
 
     // ---------- alarm barrel (brass, slipping bridle) ----------
     this.addObject(extrudeProfile(gearOutline(SPEC.alarmBarrel.wheelTeeth, 12.5, 0.75), 0.4, 3.0), MAT.brass, [POS.alarmBarrel[0], POS.alarmBarrel[1], 0],
@@ -723,7 +721,7 @@ export class Slava5671Renderer {
     this.addObject(extrudeProfile(sawWheelOutline(SPEC.hammerForkWheelTeeth, 4.6), 2.4, 3.2), MAT.brassBright, [POS.saw[0], POS.saw[1], 0],
       (s) => [s.alarmWheelAngle, 0]);
 
-    // ---------- button-driven stop stem entering the saw-wheel teeth ----------
+    // ---------- button-driven bent shut-off lever entering the saw-wheel teeth ----------
     const guardP: [number, number, number] = [19.5, -2.5, 0];
     this.addObject(alarmGuardMesh(), MAT.steelSatin, guardP,
       (s) => [0.18 - s.stopStemInsertion * 0.30, 0]);
@@ -742,7 +740,7 @@ export class Slava5671Renderer {
     // ---------- translucent dial and the three original hand profiles ----------
     const handCenterP: [number, number, number] = [POS.center[0], POS.center[1], 0];
     this.addObject(disc(26.5, 6.4, 6.65, 96), MAT.dialIvory, handCenterP,
-      () => [0, 0], [0, 0, 0], 'always', this.dialTexture);
+      () => [0, 0], [0, 0, 0], 'demo', this.dialTexture);
 
     this.addObject(alarmHandMesh(22.0, 7.0, 7.2), MAT.brassBright, handCenterP,
       (s) => [-s.alarmHandAngle, 0], [0, 0, 0], 'always');

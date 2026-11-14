@@ -133,14 +133,21 @@ def mainplate_outline() -> list[Point]:
 
 def alarm_wheel_plate_outline() -> list[Point]:
     traced = [
-        (544, 117), (580, 117), (615, 130), (648, 140), (680, 138), (712, 147),
-        (743, 168), (770, 199), (788, 236), (793, 275), (784, 315), (762, 351),
-        (728, 380), (690, 401), (648, 416), (610, 428), (575, 433), (540, 426),
-        (507, 410), (480, 388), (459, 357), (445, 322), (438, 285), (439, 246),
-        (449, 209), (469, 177), (493, 151), (521, 133),
+        (370, 31), (398, 29), (423, 39), (424, 53), (429, 64), (438, 56),
+        (446, 43), (464, 41), (510, 55), (551, 77), (589, 107), (622, 141),
+        (648, 184), (663, 230), (668, 280), (657, 329), (638, 378), (610, 424),
+        (575, 464), (536, 495), (493, 516), (480, 521), (480, 501), (472, 494),
+        (462, 495), (455, 508), (452, 528), (432, 538), (388, 543), (337, 541),
+        (286, 530), (270, 517), (264, 492), (252, 488), (244, 496), (234, 516),
+        (226, 516), (220, 508), (183, 479), (150, 444), (127, 402), (112, 354),
+        (109, 304), (118, 257), (136, 211), (158, 169), (190, 134), (222, 107),
+        (254, 105), (273, 86), (305, 91), (324, 68), (323, 49), (337, 54),
     ]
-    scale = 0.82 * math.sqrt(math.pi * (CALIBER_MM / 2) ** 2 / polygon_area(traced))
-    return [((x - 610) * scale, (260 - y) * scale) for x, y in traced]
+    points = [((x - 389) / 280, (282 - y) / 256) for x, y in traced]
+    scale = (CALIBER_MM / 2) * 0.94 / max(math.hypot(x, y) for x, y in points)
+    angle = math.radians(304)
+    c, s = math.cos(angle), math.sin(angle)
+    return [((c * x - s * y) * scale, (s * x + c * y) * scale) for x, y in points]
 
 
 def cylinder(radius: float, z0: float, z1: float, xy: Point = (0, 0)) -> cq.Workplane:
@@ -399,7 +406,7 @@ def build() -> tuple[dict[str, Part], dict[str, cq.Workplane]]:
 
     alarm_outline = [
         (8, 13), (8.5, 18), (11, 22), (15, 24), (19, 23), (21.5, 21), (22.5, 18),
-        (21, 15), (18.5, 13), (17.5, 10), (18.5, 8), (20, 9), (23, 8.5),
+        (20, 17), (17.5, 15), (16.3, 12.8), (16.8, 10.8), (18.4, 9.4), (20.5, 10.2), (23, 8.5),
         (24.5, 6), (25, 2), (25, -4), (23, -8), (20, -11), (17, -12.5),
         (14, -11), (12, -8), (11, -4), (10, 0), (8.5, 5),
     ]
@@ -560,18 +567,20 @@ def build() -> tuple[dict[str, Part], dict[str, cq.Workplane]]:
 
     guard_xy = (19.5, -2.5)
     guard_outline = [
-        (1.0, 0.9), (2.3, 1.3), (3.0, 0.8), (3.1, -0.1), (2.2, -0.7),
-        (0.8, -0.9), (-0.3, -2.0), (-1.0, -4.2), (-1.4, -6.1), (-2.0, -7.0),
-        (-3.0, -7.2), (-3.7, -6.6), (-3.5, -5.7), (-2.7, -4.5), (-1.9, -2.4),
-        (-1.2, -0.8), (-0.4, 0.5),
+        (2.8, 1.7), (3.3, 1.2), (3.1, 0.3), (1.6, -0.1), (0.7, -0.6),
+        (-0.3, -0.7), (-0.9, -1.4), (-1.35, -2.5), (-1.96, -3.30), (-2.15, -2.75),
+        (-1.75, -1.8), (-0.6, 0.1), (0.8, 1.0), (1.8, 1.4),
     ]
     guard_plate = perforated_plate(
         [(x + guard_xy[0], y + guard_xy[1]) for x, y in guard_outline], [], 4.0, 4.35,
     )
-    guard_boss = ring(1.05, 0.36, 4.0, 4.35, guard_xy)
-    guard_upright = box((0.38, 1.60, 3.40), (guard_xy[0] - 2.7, guard_xy[1] - 6.4), 5.70)
-    guard_pawl = box((0.55, 0.70, 1.20), (guard_xy[0] - 1.8, guard_xy[1] - 5.0), 3.60)
-    guard = fuse([guard_plate, guard_boss, guard_upright, guard_pawl])
+    guard_boss = ring(0.85, 0.36, 4.0, 4.35, guard_xy)
+    guard_upright = box((0.45, 2.10, 3.10), (guard_xy[0] + 2.75, guard_xy[1] + 0.90), 5.55)
+    guard_upright = guard_upright.rotate(
+        (guard_xy[0] + 2.75, guard_xy[1] + 0.90, 0),
+        (guard_xy[0] + 2.75, guard_xy[1] + 0.90, 1), -20.1,
+    )
+    guard = fuse([guard_plate, guard_boss, guard_upright])
     add("alarm_shutoff_guard", guard.cut(cylinder(0.36, 3.9, 4.45, guard_xy)), "steel", steel)
     add("alarm_guard_arbor", cylinder(0.35, 0.2, 5.0, guard_xy), "steel", steel)
 
@@ -605,15 +614,12 @@ def build() -> tuple[dict[str, Part], dict[str, cq.Workplane]]:
     add("alarm_setting_pinion", local(prism(gear_outline(12, 1.4, 0.63), -2.0, -1.45), (7.2, 7.8)), "CuZn37", brass)
     stop_xy = (10.2, 5.5)
     stop_spring = fuse([
-        bar((stop_xy[0], stop_xy[1] - 5.0), (stop_xy[0] + 0.25, stop_xy[1] + 5.8), 0.68, 0.55, -2.35, -2.05),
-        bar((stop_xy[0] + 0.25, stop_xy[1] + 5.8), (stop_xy[0] - 0.35, stop_xy[1] + 6.6), 0.55, 0.38, -2.35, -2.05),
-        bar((stop_xy[0] - 0.35, stop_xy[1] + 6.6), (stop_xy[0] - 0.85, stop_xy[1] + 6.25), 0.38, 0.30, -2.35, -2.05),
-        box((0.38, 0.65, 0.85), (stop_xy[0] - 0.85, stop_xy[1] + 6.25), -1.925),
+        bar((stop_xy[0], stop_xy[1] - 5.0), (stop_xy[0] + 0.25, stop_xy[1] + 6.6), 0.68, 0.55, -2.35, -2.05),
+        box((0.38, 0.65, 0.85), (stop_xy[0] + 0.25, stop_xy[1] + 6.25), -1.925),
     ])
     stop_spring = stop_spring.cut(box((0.24, 1.80, 0.50), (stop_xy[0] + 0.02, stop_xy[1] - 2.8), -2.20))
     stop_spring = stop_spring.cut(box((0.24, 1.25, 0.50), (stop_xy[0] + 0.10, stop_xy[1] - 0.7), -2.20))
     add("alarm_stop_spring", stop_spring, "spring steel", steel)
-    add("alarm_release_link", bar((10.35, 0.2), (17.1, -3.1), 0.38, 0.30, 1.15, 4.15), "steel", steel)
 
     add("dial", ring(26.5, 0.65, -2.65, -2.40), "painted brass", (0.87, 0.85, 0.73))
     add("alarm_hand", make_hand(22.0, 0.70, 2.05, 1.10, -3.00, -2.80), "CuZn37", brass)

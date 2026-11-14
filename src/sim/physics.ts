@@ -16,8 +16,8 @@
  *   friction slipping bridle (winding clamps at full turns instead of breaking).
  * · Alarm: spring 20 preloads the hour wheel and its bent end retains the hammer stem;
  *   full seating of the hour-wheel tab in the alarm-wheel slot lifts spring 20 and
- *   releases the hammer. A separate button inserts the stop stem between saw-wheel
- *   teeth. The two locks react barrel torque independently of the striking motion.
+ *   releases the hammer. A separate button turns the bent shut-off lever into the
+ *   saw-wheel teeth. The two locks react barrel torque independently of the striking motion.
  */
 
 import { SPEC } from './specs';
@@ -61,7 +61,7 @@ export interface SimSnapshot {
   alarmLockLoad: number;     // normalized saw-wheel torque reacted by the active lock
   hammerStemReleased: boolean;
   manualStopEngaged: boolean;
-  stopStemInsertion: number; // 0..1 button-driven saw-wheel stop travel
+  stopStemInsertion: number; // 0..1 button-driven shut-off lever travel
   stopSpringDeflection: number; // 0..1 spring-20 lift from the mainplate
   hourWheelDrop: number;     // 0..1 axial drop animation
   hammerAngle: number;       // rad

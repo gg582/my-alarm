@@ -19,9 +19,12 @@ The exporter writes native OpenCascade B-rep solids, not triangulated render mes
 - `cad/output/pallet-bridge.step`
 - `cad/output/balance-cock.step`
 - `cad/output/alarm-bridge.step`
+- `cad/output/hairspring.step`: one continuous flat spring with inner terminal and pierced outer stud eye.
+- `cad/output/hairspring-collet.step`: split staff collet with a 0.20 mm terminal slot.
+- `cad/output/hairspring-stud.step`: slotted outer stud with a 0.18 mm retaining pin.
 - `cad/output/manifest.json`: dimensions, materials, part bounds, volumes, and solid counts.
 
-The command reimports every STEP file, checks solid validity, verifies the 19.000 mm overall height, checks the train center distances, and confirms the cylindrical jewel-seat diameters in the exported plates.
+The command reimports every STEP file, checks solid validity, verifies the 19.000 mm overall height, checks the train center distances, and confirms the cylindrical jewel-seat diameters in the exported plates. The hairspring and both fittings must each reimport as exactly one valid solid; the spring is also checked for its 0.08 mm stock thickness and 0.20 mm outer eye.
 
 ## Dimensions and fit
 
@@ -39,6 +42,8 @@ The six hole-jewel seats use a 0.01 mm diametral press interference, following t
 | Balance caps, upper and lower | Seitz 30713-120 | 1.20 mm OD | 1.190 mm blind pocket |
 
 The pallet stones and impulse jewel complete the manual's 11-jewel count: six hole jewels, two cap jewels, two pallet stones, and one impulse jewel. Purchased jewels are simplified in the assembly; their seats and mating pivot diameters are the manufacturing interface.
+
+The 6.5-turn hairspring uses a 520-segment radial profile at 80 segments per turn. Its 1.10–5.00 mm radial span, 0.18 mm ribbon width, and 0.08 mm thickness leave a nominal 0.42 mm radial gap between turns. The inner tongue fits the split collet, and the outer eye fits the stud pin; both terminals are fused into the same exported solid. Export validation rejects a missing or truncated spiral by checking its two-dimensional bounds and minimum body volume. These dimensions describe flat-stock microfabrication geometry, not an FDM-printable process guarantee.
 
 ## References and limits
 

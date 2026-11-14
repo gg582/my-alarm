@@ -11,7 +11,7 @@
     32.2,
     15.0
   ],
-  "solid_count": 85,
+  "solid_count": 87,
   "jewels": {
     "escape": {
       "part": "30712/26-120",
@@ -49,6 +49,21 @@
     "third/fourth": 12.80000000001724,
     "fourth/escape": 8.400000000043889,
     "alarm_barrel/saw": 13.900000000009886
+  },
+  "hairspring": {
+    "turns": 6.5,
+    "inner_radius": 1.1,
+    "outer_radius": 5.0,
+    "ribbon_width": 0.18,
+    "thickness": 0.08,
+    "z0": 7.3,
+    "outer_stud_offset": [
+      5.05,
+      1.4
+    ],
+    "minimum_radial_gap": 0.42,
+    "outer_eye_diameter": 0.2,
+    "collet_slit_width": 0.19999999999999998
   },
   "parts": [
     {
@@ -543,16 +558,44 @@
     },
     {
       "name": "hairspring",
-      "material": "blued steel",
+      "material": "0.08 mm blued spring steel",
       "solid_count": 1,
-      "volume_mm3": 2.981379,
+      "volume_mm3": 1.815825,
       "bounds_mm": [
-        1.4754466913000002,
-        -22.509894726272357,
+        1.8104781087128003,
+        -22.778408015206235,
+        7.299999999999999,
+        11.905446691299998,
+        -13.248540248452379,
+        7.38
+      ]
+    },
+    {
+      "name": "hairspring_collet",
+      "material": "slit steel hairspring collet",
+      "solid_count": 1,
+      "volume_mm3": 0.49756,
+      "bounds_mm": [
+        5.6254466913,
+        -18.8136543978,
         7.3,
-        11.370612844560466,
-        -12.913305083238079,
-        7.42
+        7.5254466913,
+        -16.913654397800002,
+        7.550000000000001
+      ]
+    },
+    {
+      "name": "hairspring_stud",
+      "material": "slotted steel outer hairspring stud",
+      "solid_count": 1,
+      "volume_mm3": 1.074312,
+      "bounds_mm": [
+        11.145446691299998,
+        -16.943654397800003,
+        6.8,
+        12.1054466913,
+        -15.983654397800002,
+        8.4
       ]
     },
     {

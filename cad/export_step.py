@@ -42,6 +42,15 @@ JEWELS = {
     "balance": {"part": "30710/16-120", "outside": 1.20, "hole": 0.16, "pivot": 0.14},
 }
 CAP_JEWEL = {"part": "30713-120", "outside": 1.20, "thickness": 0.20}
+HAIRSPRING = {
+    "turns": 6.5,
+    "inner_radius": 1.10,
+    "outer_radius": 5.00,
+    "ribbon_width": 0.18,
+    "thickness": 0.08,
+    "z0": 7.30,
+    "outer_stud_offset": (5.05, 1.40),
+}
 TRAIN_SCREWS = [(-20.0, 15.0), (-16.0, 3.0), (-5.0, 18.0), (7.0, 10.0), (-5.6, -13.3)]
 ALARM_SCREWS = [(18.0, 19.0), (22.0, 7.0), (18.0, -7.0)]
 
@@ -213,18 +222,47 @@ def make_pallet() -> cq.Workplane:
     return local(fuse(local_parts), xy)
 
 
-def make_hairspring() -> cq.Workplane:
+def make_hairspring() -> tuple[cq.Workplane, cq.Workplane, cq.Workplane]:
     outer = []
     inner = []
-    turns = 6.5
-    segments = 320
-    for index in range(segments):
-        t = index / (segments - 1)
-        angle = t * turns * math.tau
-        radius = 1.1 + (5.0 - 1.1) * t
-        outer.append((POS["balance"][0] + (radius + 0.10) * math.cos(angle), POS["balance"][1] + (radius + 0.10) * math.sin(angle)))
-        inner.append((POS["balance"][0] + (radius - 0.10) * math.cos(angle), POS["balance"][1] + (radius - 0.10) * math.sin(angle)))
-    return prism(outer + list(reversed(inner)), 7.3, 7.42)
+    turns = HAIRSPRING["turns"]
+    width = HAIRSPRING["ribbon_width"]
+    z0 = HAIRSPRING["z0"]
+    z1 = z0 + HAIRSPRING["thickness"]
+    balance_x, balance_y = POS["balance"]
+    stud = (balance_x + HAIRSPRING["outer_stud_offset"][0], balance_y + HAIRSPRING["outer_stud_offset"][1])
+    stud_angle = math.atan2(stud[1] - balance_y, stud[0] - balance_x)
+    phase = stud_angle - turns * math.tau
+    for index in range(520):
+        t = index / 519
+        angle = phase + t * turns * math.tau
+        radius = HAIRSPRING["inner_radius"] + (HAIRSPRING["outer_radius"] - HAIRSPRING["inner_radius"]) * t
+        outer.append((balance_x + (radius + width / 2) * math.cos(angle), balance_y + (radius + width / 2) * math.sin(angle)))
+        inner.append((balance_x + (radius - width / 2) * math.cos(angle), balance_y + (radius - width / 2) * math.sin(angle)))
+    inner_reversed = list(reversed(inner))
+
+    spiral = prism(outer + inner_reversed, z0, z1)
+    inner_start = (balance_x + 0.75 * math.cos(phase), balance_y + 0.75 * math.sin(phase))
+    inner_end = (balance_x + 1.25 * math.cos(phase), balance_y + 1.25 * math.sin(phase))
+    outer_start = (balance_x + 4.85 * math.cos(stud_angle), balance_y + 4.85 * math.sin(stud_angle))
+    spring = fuse([
+        spiral,
+        bar(inner_start, inner_end, width, width, z0, z1),
+        bar(outer_start, stud, width, width, z0, z1),
+        ring(0.28, 0.10, z0, z1, stud),
+    ])
+
+    collet = ring(0.95, 0.50, z0, z0 + 0.25, POS["balance"])
+    slit_center = (balance_x + 0.90 * math.cos(phase), balance_y + 0.90 * math.sin(phase))
+    slit = box((0.50, width + 0.02, 0.30), slit_center, z0 + 0.125, phase)
+    collet = collet.cut(slit)
+
+    stud_body = fuse([
+        cylinder(0.48, 6.80, z0 - 0.02, stud),
+        cylinder(0.09, z0 - 0.02, z1 + 0.02, stud),
+        cylinder(0.48, z1 + 0.02, 8.40, stud),
+    ])
+    return spring, collet, stud_body
 
 
 def make_hand(length: float, width: float, ring_outer: float, bore: float, z0: float, z1: float) -> cq.Workplane:
@@ -403,7 +441,10 @@ def build() -> tuple[dict[str, Part], dict[str, cq.Workplane]]:
     add("balance_staff", balance_staff, "hardened steel", steel)
     add("double_roller", ring(1.7, 0.50, 4.2, 5.2, POS["balance"]), "steel", steel)
     add("impulse_jewel", cylinder(0.38, 4.0, 5.4, (balance_x + 1.35, balance_y)), "synthetic ruby purchased roller jewel", ruby)
-    add("hairspring", make_hairspring(), "blued steel", blue)
+    hairspring, hairspring_collet, hairspring_stud = make_hairspring()
+    add("hairspring", hairspring, "0.08 mm blued spring steel", blue)
+    add("hairspring_collet", hairspring_collet, "slit steel hairspring collet", steel)
+    add("hairspring_stud", hairspring_stud, "slotted steel outer hairspring stud", steel)
 
     regulator = fuse([
         ring(0.72, 0.30, 8.64, 8.82, POS["balance"]),
@@ -560,6 +601,22 @@ def export() -> None:
             if not any(abs(actual - expected) < 1e-6 for actual in diameters):
                 raise RuntimeError(f"Missing {expected:.3f} mm jewel seat in {path}")
 
+    for name in ["hairspring", "hairspring_collet", "hairspring_stud"]:
+        path = OUTPUT_DIR / f"{name.replace('_', '-')}.step"
+        cq.exporters.export(parts[name].shape, str(path))
+        roundtrip = cq.importers.importStep(str(path))
+        solids = roundtrip.solids().vals()
+        if len(solids) != 1 or not solids[0].isValid():
+            raise RuntimeError(f"{name} must round trip as one valid solid")
+        if name == "hairspring":
+            spring_bounds = roundtrip.val().BoundingBox()
+            if abs(spring_bounds.zlen - HAIRSPRING["thickness"]) > 1e-6:
+                raise RuntimeError(f"Hairspring thickness is {spring_bounds.zlen:.6f} mm")
+            if spring_bounds.xlen < 9.0 or spring_bounds.ylen < 9.0 or solids[0].Volume() < 1.5:
+                raise RuntimeError("Hairspring spiral body is missing or truncated")
+            if not any(abs(diameter - 0.20) < 1e-6 for diameter in cylindrical_diameters(roundtrip)):
+                raise RuntimeError("Hairspring outer stud eye is missing its 0.20 mm hole")
+
     imported = cq.importers.importStep(str(assembly_path))
     imported_solids = imported.solids().vals()
     if len(imported_solids) != total_solids or not all(solid.isValid() for solid in imported_solids):
@@ -593,6 +650,12 @@ def export() -> None:
         "press_interference": PRESS_INTERFERENCE_MM,
         "seat_diameters": {key: data["outside"] - PRESS_INTERFERENCE_MM for key, data in JEWELS.items()},
         "mesh_center_distances": mesh_center_distances,
+        "hairspring": {
+            **HAIRSPRING,
+            "minimum_radial_gap": (HAIRSPRING["outer_radius"] - HAIRSPRING["inner_radius"]) / HAIRSPRING["turns"] - HAIRSPRING["ribbon_width"],
+            "outer_eye_diameter": 0.20,
+            "collet_slit_width": HAIRSPRING["ribbon_width"] + 0.02,
+        },
         "parts": manifest_parts,
     }
     (OUTPUT_DIR / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n")
@@ -601,6 +664,7 @@ def export() -> None:
     print(f"Mainplate equivalent diameter: {CALIBER_MM:.3f} mm; area: {manifest['mainplate_unperforated_area_mm2']:.3f} mm^2")
     for key, diameter in manifest["seat_diameters"].items():
         print(f"{key} jewel seat: {diameter:.3f} mm")
+    print(f"Hairspring: {HAIRSPRING['ribbon_width']:.3f} x {HAIRSPRING['thickness']:.3f} mm ribbon, one valid solid")
 
 
 if __name__ == "__main__":

@@ -423,7 +423,7 @@ def build() -> tuple[dict[str, Part], dict[str, cq.Workplane]]:
         add(name, arbor, "hardened steel", steel)
 
     add("pallet_fork", make_pallet(), "hardened steel", steel)
-    pallet_entry = prism([(-0.3, -0.72), (0.28, -0.72), (0.34, 0.62), (0.22, 0.76), (-0.28, 0.72)], 2.05, 3.45)
+    pallet_entry = prism([(-0.72, -0.28), (0.72, -0.28), (0.76, 0.22), (0.62, 0.34), (-0.72, 0.30)], 2.05, 3.45)
     pallet_exit = pallet_entry.rotate((0, 0, 0), (0, 0, 1), math.degrees(-0.8491 + 0.2284))
     entry = pallet_entry.rotate((0, 0, 0), (0, 0, 1), math.degrees(-0.2284)).translate((fork_x - 1.2, fork_y + 2.3, 0))
     exit_stone = pallet_exit.translate((fork_x - 2.6, fork_y, 0))
@@ -575,6 +575,9 @@ def export() -> None:
         total_solids += len(solids)
         assembly.add(part.shape, name=name, color=part.color)
         bounds = part.shape.val().BoundingBox()
+        if name in {"pallet_entry_stone", "pallet_exit_stone"}:
+            if abs(bounds.zlen - 1.40) > 1e-6 or max(bounds.xlen, bounds.ylen) < 1.45:
+                raise RuntimeError(f"Pallet stone must use its toe-in planar fork orientation: {name}")
         manifest_parts.append({
             "name": name,
             "material": part.material,

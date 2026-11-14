@@ -41,7 +41,7 @@ The six hole-jewel seats use a 0.01 mm diametral press interference, following t
 | Balance, upper and lower | Seitz 30710/16-120 | 1.20 / 0.16 mm | 1.190 mm |
 | Balance caps, upper and lower | Seitz 30713-120 | 1.20 mm OD | 1.190 mm blind pocket |
 
-The pallet stones and impulse jewel complete the manual's 11-jewel count: six hole jewels, two cap jewels, two pallet stones, and one impulse jewel. Purchased jewels are simplified in the assembly; their seats and mating pivot diameters are the manufacturing interface.
+The pallet stones and impulse jewel complete the manual's 11-jewel count: six hole jewels, two cap jewels, two pallet stones, and one impulse jewel. The pallet stones use a fork arrangement in the XY plane: their long axes are X-referenced and toed into the escape-wheel contact directions at -0.2284 and -0.8491 radians, with a 1.40 mm Z thickness. Purchased jewels are simplified in the assembly; their seats and mating pivot diameters are the manufacturing interface.
 
 The 6.5-turn hairspring uses a 520-segment radial profile at 80 segments per turn. Its 1.10–5.00 mm radial span, 0.18 mm ribbon width, and 0.08 mm thickness leave a nominal 0.42 mm radial gap between turns. The inner tongue fits the split collet, and the outer eye fits the stud pin; both terminals are fused into the same exported solid. Export validation rejects a missing or truncated spiral by checking its two-dimensional bounds and minimum body volume. These dimensions describe flat-stock microfabrication geometry, not an FDM-printable process guarantee.
 

@@ -526,7 +526,7 @@ export function palletForkMesh(z0 = 3.0, z1 = 3.35): MeshData {
 
 export function palletStonesMesh(z0 = 2.05, z1 = 3.45): MeshData {
   const stone = extrudeProfile([
-    [-0.3, -0.72], [0.28, -0.72], [0.34, 0.62], [0.22, 0.76], [-0.28, 0.72],
+    [-0.72, -0.28], [0.72, -0.28], [0.76, 0.22], [0.62, 0.34], [-0.72, 0.3],
   ], z0, z1);
   return mergeMeshes([
     transformedMesh(stone, -0.2284, -1.2, 2.3, 0),

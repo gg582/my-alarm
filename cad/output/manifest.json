@@ -1,0 +1,1245 @@
+{
+  "units": "mm",
+  "caliber_equivalent_diameter": 55.8,
+  "mainplate_unperforated_area_mm2": 2445.447137480831,
+  "movement_height": 19.0,
+  "assembly_bounds_mm": [
+    -32.2,
+    -32.2,
+    -4.0,
+    32.2,
+    32.2,
+    15.0
+  ],
+  "solid_count": 85,
+  "jewels": {
+    "escape": {
+      "part": "30712/26-120",
+      "outside": 1.2,
+      "hole": 0.26,
+      "pivot": 0.24
+    },
+    "fork": {
+      "part": "30712/15-100",
+      "outside": 1.0,
+      "hole": 0.15,
+      "pivot": 0.13
+    },
+    "balance": {
+      "part": "30710/16-120",
+      "outside": 1.2,
+      "hole": 0.16,
+      "pivot": 0.14
+    }
+  },
+  "cap_jewel": {
+    "part": "30713-120",
+    "outside": 1.2,
+    "thickness": 0.2
+  },
+  "press_interference": 0.01,
+  "seat_diameters": {
+    "escape": 1.19,
+    "fork": 0.99,
+    "balance": 1.19
+  },
+  "mesh_center_distances": {
+    "barrel/center": 16.099999999996523,
+    "center/third": 10.500000000032683,
+    "third/fourth": 12.80000000001724,
+    "fourth/escape": 8.400000000043889,
+    "alarm_barrel/saw": 13.900000000009886
+  },
+  "parts": [
+    {
+      "name": "mainplate",
+      "material": "CuZn37 nickel plated",
+      "solid_count": 1,
+      "volume_mm3": 2919.355981,
+      "bounds_mm": [
+        -28.24839265285414,
+        -28.41262749385911,
+        0.0,
+        28.084157811849174,
+        29.398036539888903,
+        1.2
+      ]
+    },
+    {
+      "name": "train_bridge",
+      "material": "CuZn37 nickel plated",
+      "solid_count": 1,
+      "volume_mm3": 1023.796595,
+      "bounds_mm": [
+        -24.5,
+        -16.0,
+        5.199999999999999,
+        12.5,
+        24.0,
+        6.4
+      ]
+    },
+    {
+      "name": "alarm_bridge",
+      "material": "CuZn37 nickel plated",
+      "solid_count": 1,
+      "volume_mm3": 392.882528,
+      "bounds_mm": [
+        9.0,
+        -12.0,
+        5.2,
+        26.0,
+        23.0,
+        6.400000000000002
+      ]
+    },
+    {
+      "name": "pallet_bridge",
+      "material": "CuZn37 nickel plated",
+      "solid_count": 1,
+      "volume_mm3": 12.890943,
+      "bounds_mm": [
+        -0.9245533087000002,
+        -18.863654397799998,
+        4.9,
+        3.4754466912999997,
+        -11.0636543978,
+        5.550000000000001
+      ]
+    },
+    {
+      "name": "balance_cock",
+      "material": "CuZn37 nickel plated",
+      "solid_count": 1,
+      "volume_mm3": 21.751695,
+      "bounds_mm": [
+        -0.8245533087000005,
+        -25.8136543978,
+        8.1,
+        9.1754466913,
+        -12.513654397800002,
+        8.65
+      ]
+    },
+    {
+      "name": "escape_lower_jewel",
+      "material": "synthetic ruby purchased part 30712/26-120",
+      "solid_count": 1,
+      "volume_mm3": 0.53894,
+      "bounds_mm": [
+        -4.0245533087,
+        -12.1636543978,
+        0.35,
+        -2.8245533087,
+        -10.963654397800001,
+        0.85
+      ]
+    },
+    {
+      "name": "escape_upper_jewel",
+      "material": "synthetic ruby purchased part 30712/26-120",
+      "solid_count": 1,
+      "volume_mm3": 0.53894,
+      "bounds_mm": [
+        -4.0245533087,
+        -12.1636543978,
+        5.55,
+        -2.8245533087,
+        -10.963654397800001,
+        6.05
+      ]
+    },
+    {
+      "name": "pallet_lower_jewel",
+      "material": "synthetic ruby purchased part 30712/15-100",
+      "solid_count": 1,
+      "volume_mm3": 0.383863,
+      "bounds_mm": [
+        1.5754466912999998,
+        -15.3636543978,
+        0.35,
+        2.5754466913,
+        -14.3636543978,
+        0.8500000000000001
+      ]
+    },
+    {
+      "name": "pallet_upper_jewel",
+      "material": "synthetic ruby purchased part 30712/15-100",
+      "solid_count": 1,
+      "volume_mm3": 0.383863,
+      "bounds_mm": [
+        1.5754466912999998,
+        -15.3636543978,
+        5.0,
+        2.5754466913,
+        -14.3636543978,
+        5.5
+      ]
+    },
+    {
+      "name": "balance_lower_jewel",
+      "material": "synthetic ruby purchased part 30710/16-120",
+      "solid_count": 1,
+      "volume_mm3": 0.610977,
+      "bounds_mm": [
+        5.9754466913,
+        -18.463654397800003,
+        0.0,
+        7.1754466912999995,
+        -17.2636543978,
+        0.55
+      ]
+    },
+    {
+      "name": "balance_upper_jewel",
+      "material": "synthetic ruby purchased part 30710/16-120",
+      "solid_count": 1,
+      "volume_mm3": 0.610977,
+      "bounds_mm": [
+        5.9754466913,
+        -18.463654397800003,
+        8.12,
+        7.1754466912999995,
+        -17.2636543978,
+        8.67
+      ]
+    },
+    {
+      "name": "balance_lower_cap",
+      "material": "synthetic ruby purchased part 30713-120",
+      "solid_count": 1,
+      "volume_mm3": 0.226195,
+      "bounds_mm": [
+        5.9754466913,
+        -18.463654397800003,
+        -0.25,
+        7.1754466912999995,
+        -17.2636543978,
+        -0.04999999999999999
+      ]
+    },
+    {
+      "name": "balance_lower_cap_setting",
+      "material": "steel jewel setting",
+      "solid_count": 1,
+      "volume_mm3": 1.703509,
+      "bounds_mm": [
+        5.1254466913,
+        -19.3136543978,
+        -0.3,
+        8.025446691299999,
+        -16.413654397800002,
+        0.0
+      ]
+    },
+    {
+      "name": "balance_upper_cap",
+      "material": "synthetic ruby purchased part 30713-120",
+      "solid_count": 1,
+      "volume_mm3": 0.226195,
+      "bounds_mm": [
+        5.9754466913,
+        -18.463654397800003,
+        8.7,
+        7.1754466912999995,
+        -17.2636543978,
+        8.899999999999999
+      ]
+    },
+    {
+      "name": "balance_upper_cap_setting",
+      "material": "steel jewel setting",
+      "solid_count": 1,
+      "volume_mm3": 1.703509,
+      "bounds_mm": [
+        5.1254466913,
+        -19.3136543978,
+        8.649999999999997,
+        8.025446691299999,
+        -16.413654397800002,
+        8.95
+      ]
+    },
+    {
+      "name": "center_wheel",
+      "material": "CuZn37",
+      "solid_count": 1,
+      "volume_mm3": 203.712636,
+      "bounds_mm": [
+        -9.289565328915065,
+        -9.289565328915065,
+        1.4,
+        9.289565328915065,
+        9.289565328915065,
+        3.2000000000000073
+      ]
+    },
+    {
+      "name": "third_wheel",
+      "material": "CuZn37",
+      "solid_count": 1,
+      "volume_mm3": 301.545689,
+      "bounds_mm": [
+        -2.0912497293409213,
+        -6.170555435008222,
+        1.3999999999999977,
+        20.444601865046934,
+        16.367668870350315,
+        3.2
+      ]
+    },
+    {
+      "name": "fourth_wheel",
+      "material": "CuZn37",
+      "solid_count": 1,
+      "volume_mm3": 113.834531,
+      "bounds_mm": [
+        -7.116239196150639,
+        -11.195639818050639,
+        1.4,
+        7.37160839635064,
+        3.2922077744506395,
+        3.000000000000007
+      ]
+    },
+    {
+      "name": "escape_wheel",
+      "material": "CuZn37",
+      "solid_count": 1,
+      "volume_mm3": 14.179935,
+      "bounds_mm": [
+        -8.024190112037555,
+        -16.144136050117417,
+        2.2,
+        1.1172959707694599,
+        -6.97047282864307,
+        3.000000000000003
+      ]
+    },
+    {
+      "name": "center_pinion",
+      "material": "steel",
+      "solid_count": 1,
+      "volume_mm3": 35.809917,
+      "bounds_mm": [
+        -3.0827166099009338,
+        -3.0827166099009333,
+        3.2,
+        3.0827166099009338,
+        3.0827166099009338,
+        5.200000000000003
+      ]
+    },
+    {
+      "name": "third_pinion",
+      "material": "steel",
+      "solid_count": 1,
+      "volume_mm3": 9.651686,
+      "bounds_mm": [
+        7.431569522414231,
+        3.3521689005142314,
+        3.2,
+        10.925733276185769,
+        6.846332654285769,
+        4.800000000000001
+      ]
+    },
+    {
+      "name": "fourth_pinion",
+      "material": "steel",
+      "solid_count": 1,
+      "volume_mm3": 14.002467,
+      "bounds_mm": [
+        -1.9932116607857024,
+        -6.115147971711626,
+        2.9999999999999996,
+        2.2485808609857028,
+        -1.7882840718883735,
+        4.6
+      ]
+    },
+    {
+      "name": "escape_pinion",
+      "material": "steel",
+      "solid_count": 1,
+      "volume_mm3": 10.141715,
+      "bounds_mm": [
+        -5.055163060460051,
+        -13.194264149560052,
+        1.3999999999999977,
+        -1.7939435569399498,
+        -9.93304464603995,
+        3.4
+      ]
+    },
+    {
+      "name": "center_arbor",
+      "material": "hardened steel",
+      "solid_count": 1,
+      "volume_mm3": 2.945369,
+      "bounds_mm": [
+        -0.44,
+        -0.44,
+        0.2,
+        0.44,
+        0.44,
+        6.25
+      ]
+    },
+    {
+      "name": "third_arbor",
+      "material": "hardened steel",
+      "solid_count": 1,
+      "volume_mm3": 0.642,
+      "bounds_mm": [
+        8.9886513993,
+        4.9092507774,
+        0.2,
+        9.3686513993,
+        5.2892507774,
+        6.15
+      ]
+    },
+    {
+      "name": "fourth_arbor",
+      "material": "hardened steel",
+      "solid_count": 1,
+      "volume_mm3": 0.642,
+      "bounds_mm": [
+        -0.06231539990000001,
+        -4.1417160218,
+        0.2,
+        0.3176846001,
+        -3.7617160218,
+        6.15
+      ]
+    },
+    {
+      "name": "escape_arbor",
+      "material": "hardened steel",
+      "solid_count": 1,
+      "volume_mm3": 1.352079,
+      "bounds_mm": [
+        -3.7245533087,
+        -11.863654397800001,
+        0.2,
+        -3.1245533087000004,
+        -11.2636543978,
+        6.2
+      ]
+    },
+    {
+      "name": "pallet_staff",
+      "material": "hardened steel",
+      "solid_count": 1,
+      "volume_mm3": 0.734021,
+      "bounds_mm": [
+        1.8354466912999998,
+        -15.1036543978,
+        0.2,
+        2.3154466913,
+        -14.6236543978,
+        5.6000000000000005
+      ]
+    },
+    {
+      "name": "pallet_fork",
+      "material": "hardened steel",
+      "solid_count": 1,
+      "volume_mm3": 1.879559,
+      "bounds_mm": [
+        -0.6104298440227622,
+        -18.24815873855571,
+        3.0,
+        6.795866975263093,
+        -12.51848120921893,
+        3.3500000000000005
+      ]
+    },
+    {
+      "name": "pallet_entry_stone",
+      "material": "synthetic ruby purchased pallet stone",
+      "solid_count": 1,
+      "volume_mm3": 1.22276,
+      "bounds_mm": [
+        0.4202157738887712,
+        -13.328353357392047,
+        2.05,
+        1.3469968685993456,
+        -11.798955438207955,
+        3.45
+      ]
+    },
+    {
+      "name": "pallet_exit_stone",
+      "material": "synthetic ruby purchased pallet stone",
+      "solid_count": 1,
+      "volume_mm3": 1.22276,
+      "bounds_mm": [
+        -1.1873501763058685,
+        -15.612203226587788,
+        2.05,
+        0.11262194690751104,
+        -14.11510556901221,
+        3.45
+      ]
+    },
+    {
+      "name": "balance_wheel",
+      "material": "CuZn37 monometallic",
+      "solid_count": 1,
+      "volume_mm3": 77.577863,
+      "bounds_mm": [
+        -1.0245533086999998,
+        -25.4636543978,
+        5.4,
+        14.1754466913,
+        -10.263654397800002,
+        6.6000000000000005
+      ]
+    },
+    {
+      "name": "balance_staff",
+      "material": "hardened steel",
+      "solid_count": 1,
+      "volume_mm3": 3.907717,
+      "bounds_mm": [
+        6.0754466913,
+        -18.3636543978,
+        -0.05,
+        7.0754466913,
+        -17.3636543978,
+        8.7
+      ]
+    },
+    {
+      "name": "double_roller",
+      "material": "steel",
+      "solid_count": 1,
+      "volume_mm3": 8.293805,
+      "bounds_mm": [
+        4.8754466913,
+        -19.5636543978,
+        4.2,
+        8.275446691299999,
+        -16.163654397800002,
+        5.2
+      ]
+    },
+    {
+      "name": "impulse_jewel",
+      "material": "synthetic ruby purchased roller jewel",
+      "solid_count": 1,
+      "volume_mm3": 0.635104,
+      "bounds_mm": [
+        7.5454466913,
+        -18.2436543978,
+        4.0,
+        8.3054466913,
+        -17.483654397800002,
+        5.4
+      ]
+    },
+    {
+      "name": "hairspring",
+      "material": "blued steel",
+      "solid_count": 1,
+      "volume_mm3": 2.981379,
+      "bounds_mm": [
+        1.4754466913000002,
+        -22.509894726272357,
+        7.3,
+        11.370612844560466,
+        -12.913305083238079,
+        7.42
+      ]
+    },
+    {
+      "name": "regulator",
+      "material": "steel",
+      "solid_count": 1,
+      "volume_mm3": 0.529899,
+      "bounds_mm": [
+        5.8554466913,
+        -18.5836543978,
+        8.64,
+        11.417538396776852,
+        -16.448947724194923,
+        8.820000000000002
+      ]
+    },
+    {
+      "name": "regulator_pin_1",
+      "material": "steel",
+      "solid_count": 1,
+      "volume_mm3": 0.056863,
+      "bounds_mm": [
+        11.1254466913,
+        -16.8836543978,
+        7.05,
+        11.3254466913,
+        -16.683654397799998,
+        8.86
+      ]
+    },
+    {
+      "name": "regulator_pin_2",
+      "material": "steel",
+      "solid_count": 1,
+      "volume_mm3": 0.056863,
+      "bounds_mm": [
+        11.425446691300001,
+        -16.583654397800004,
+        7.05,
+        11.6254466913,
+        -16.3836543978,
+        8.86
+      ]
+    },
+    {
+      "name": "time_barrel_gear",
+      "material": "CuZn37",
+      "solid_count": 1,
+      "volume_mm3": 237.542214,
+      "bounds_mm": [
+        -25.664800666083174,
+        -2.914155553583175,
+        1.4,
+        2.004129749083175,
+        24.75477486158318,
+        4.400000000000009
+      ]
+    },
+    {
+      "name": "time_barrel_gear_drum",
+      "material": "CuZn37",
+      "solid_count": 1,
+      "volume_mm3": 92.362824,
+      "bounds_mm": [
+        -24.330335458500002,
+        -1.5796903459999996,
+        1.3999999999999997,
+        0.6696645414999995,
+        23.420309654,
+        3.8
+      ]
+    },
+    {
+      "name": "time_barrel_gear_cover",
+      "material": "CuZn37",
+      "solid_count": 1,
+      "volume_mm3": 97.909306,
+      "bounds_mm": [
+        -24.330335458500002,
+        -1.5796903459999996,
+        3.7999999999999994,
+        0.6696645414999995,
+        23.420309654,
+        4.0
+      ]
+    },
+    {
+      "name": "time_barrel_gear_ratchet",
+      "material": "steel",
+      "solid_count": 1,
+      "volume_mm3": 20.089621,
+      "bounds_mm": [
+        -15.145090359918202,
+        7.857015503131775,
+        4.0,
+        -8.515580557081801,
+        14.320309654,
+        4.8
+      ]
+    },
+    {
+      "name": "time_barrel_gear_arbor",
+      "material": "hardened steel",
+      "solid_count": 1,
+      "volume_mm3": 6.428482,
+      "bounds_mm": [
+        -12.4803354585,
+        10.270309654,
+        0.2,
+        -11.1803354585,
+        11.570309654,
+        5.8
+      ]
+    },
+    {
+      "name": "alarm_barrel_gear",
+      "material": "CuZn37",
+      "solid_count": 1,
+      "volume_mm3": 189.928753,
+      "bounds_mm": [
+        2.1653154758916706,
+        -3.8346845241083294,
+        1.4,
+        27.83468452410833,
+        21.83468452410833,
+        4.0000000000000115
+      ]
+    },
+    {
+      "name": "alarm_barrel_gear_drum",
+      "material": "CuZn37",
+      "solid_count": 1,
+      "volume_mm3": 84.823002,
+      "bounds_mm": [
+        3.5,
+        -2.5,
+        1.4,
+        26.5,
+        20.5,
+        3.8
+      ]
+    },
+    {
+      "name": "alarm_barrel_gear_cover",
+      "material": "CuZn37",
+      "solid_count": 1,
+      "volume_mm3": 82.829661,
+      "bounds_mm": [
+        3.5,
+        -2.5,
+        3.8,
+        26.5,
+        20.5,
+        4.0
+      ]
+    },
+    {
+      "name": "alarm_barrel_gear_ratchet",
+      "material": "steel",
+      "solid_count": 1,
+      "volume_mm3": 15.437875,
+      "bounds_mm": [
+        12.075216263454529,
+        6.297093396292742,
+        4.0,
+        17.92478373654547,
+        12.0,
+        4.8
+      ]
+    },
+    {
+      "name": "alarm_barrel_gear_arbor",
+      "material": "hardened steel",
+      "solid_count": 1,
+      "volume_mm3": 6.428482,
+      "bounds_mm": [
+        14.35,
+        8.35,
+        0.2,
+        15.65,
+        9.65,
+        5.8
+      ]
+    },
+    {
+      "name": "hammer_fork_saw_wheel",
+      "material": "CuZn37",
+      "solid_count": 1,
+      "volume_mm3": 40.101518,
+      "bounds_mm": [
+        8.463166982791083,
+        -9.331374127408916,
+        2.4,
+        17.605319313808916,
+        -0.1892217963910845,
+        3.200000000000003
+      ]
+    },
+    {
+      "name": "hammer_fork_saw_pinion",
+      "material": "steel",
+      "solid_count": 1,
+      "volume_mm3": 5.201534,
+      "bounds_mm": [
+        11.374318819891805,
+        -6.420222290308195,
+        1.3999999999999988,
+        14.694167476708195,
+        -3.100373633491805,
+        2.4
+      ]
+    },
+    {
+      "name": "hammer_fork_arbor",
+      "material": "steel",
+      "solid_count": 1,
+      "volume_mm3": 0.897427,
+      "bounds_mm": [
+        12.8042431483,
+        -4.9902979619000005,
+        0.2,
+        13.2642431483,
+        -4.5302979619,
+        5.6
+      ]
+    },
+    {
+      "name": "alarm_shutoff_guard",
+      "material": "steel",
+      "solid_count": 1,
+      "volume_mm3": 5.529247,
+      "bounds_mm": [
+        11.15,
+        -3.45,
+        4.0,
+        20.7,
+        0.2999999999999998,
+        4.35
+      ]
+    },
+    {
+      "name": "alarm_guard_arbor",
+      "material": "steel",
+      "solid_count": 1,
+      "volume_mm3": 1.847256,
+      "bounds_mm": [
+        19.15,
+        -2.85,
+        0.2,
+        19.85,
+        -2.15,
+        5.0
+      ]
+    },
+    {
+      "name": "hammer_fork",
+      "material": "steel",
+      "solid_count": 1,
+      "volume_mm3": 1.342215,
+      "bounds_mm": [
+        15.35,
+        -9.0,
+        2.8,
+        18.65,
+        -7.35,
+        3.35
+      ]
+    },
+    {
+      "name": "hammer_arm",
+      "material": "steel",
+      "solid_count": 1,
+      "volume_mm3": 1.267731,
+      "bounds_mm": [
+        16.84381007037057,
+        -12.239264061844626,
+        3.5,
+        26.61433600636636,
+        -8.817778415432329,
+        3.85
+      ]
+    },
+    {
+      "name": "hammer_head",
+      "material": "steel",
+      "solid_count": 1,
+      "volume_mm3": 19.301945,
+      "bounds_mm": [
+        25.4,
+        -13.799999999999999,
+        2.8,
+        28.6,
+        -10.6,
+        5.2
+      ]
+    },
+    {
+      "name": "hammer_staff",
+      "material": "steel",
+      "solid_count": 1,
+      "volume_mm3": 1.847256,
+      "bounds_mm": [
+        16.65,
+        -9.35,
+        0.2,
+        17.35,
+        -8.65,
+        5.0
+      ]
+    },
+    {
+      "name": "hour_wheel",
+      "material": "CuZn37",
+      "solid_count": 1,
+      "volume_mm3": 179.197777,
+      "bounds_mm": [
+        -8.23,
+        -8.23,
+        -1.675,
+        8.23,
+        8.23,
+        -0.8
+      ]
+    },
+    {
+      "name": "alarm_wheel",
+      "material": "CuZn37",
+      "solid_count": 1,
+      "volume_mm3": 124.777694,
+      "bounds_mm": [
+        -7.3771226489978154,
+        -7.304690533973755,
+        -2.15,
+        7.3771226489978154,
+        7.3771226489978154,
+        -1.3499999999999988
+      ]
+    },
+    {
+      "name": "cannon_pinion",
+      "material": "CuZn37",
+      "solid_count": 1,
+      "volume_mm3": 7.79316,
+      "bounds_mm": [
+        -1.82,
+        -1.82,
+        -2.4,
+        1.82,
+        1.82,
+        -1.6
+      ]
+    },
+    {
+      "name": "minute_wheel",
+      "material": "CuZn37",
+      "solid_count": 1,
+      "volume_mm3": 19.258173,
+      "bounds_mm": [
+        -8.151953018577398,
+        -1.1519530185773976,
+        -2.3000000000000007,
+        -1.048046981422602,
+        5.951953018577397,
+        -1.75
+      ]
+    },
+    {
+      "name": "minute_wheel_pinion",
+      "material": "steel",
+      "solid_count": 1,
+      "volume_mm3": 2.481767,
+      "bounds_mm": [
+        -5.879014064270358,
+        1.1209859357296423,
+        -1.75,
+        -3.320985935729642,
+        3.6790140642703575,
+        -1.0
+      ]
+    },
+    {
+      "name": "alarm_idler",
+      "material": "CuZn37",
+      "solid_count": 1,
+      "volume_mm3": 14.914107,
+      "bounds_mm": [
+        4.44958872255623,
+        0.0426731277283956,
+        -2.2000000000000046,
+        10.750411277443769,
+        6.357326872271605,
+        -1.65
+      ]
+    },
+    {
+      "name": "alarm_setting_pinion",
+      "material": "CuZn37",
+      "solid_count": 1,
+      "volume_mm3": 2.952248,
+      "bounds_mm": [
+        5.540075671591805,
+        6.140075671591805,
+        -2.0,
+        8.859924328408196,
+        9.459924328408196,
+        -1.45
+      ]
+    },
+    {
+      "name": "alarm_stop_spring",
+      "material": "spring steel",
+      "solid_count": 1,
+      "volume_mm3": 2.124902,
+      "bounds_mm": [
+        9.698,
+        0.49213173739949134,
+        -2.35,
+        10.72492635204127,
+        12.214,
+        -2.05
+      ]
+    },
+    {
+      "name": "alarm_release_link",
+      "material": "steel",
+      "solid_count": 1,
+      "volume_mm3": 7.663758,
+      "bounds_mm": [
+        10.26655007491906,
+        -3.2347576541378804,
+        1.15,
+        17.16588151980074,
+        0.37069302857464814,
+        4.15
+      ]
+    },
+    {
+      "name": "dial",
+      "material": "painted brass",
+      "solid_count": 1,
+      "volume_mm3": 551.21403,
+      "bounds_mm": [
+        -26.5,
+        -26.5,
+        -2.65,
+        26.5,
+        26.5,
+        -2.4
+      ]
+    },
+    {
+      "name": "alarm_hand",
+      "material": "CuZn37",
+      "solid_count": 1,
+      "volume_mm3": 4.626576,
+      "bounds_mm": [
+        -2.05,
+        -22.0,
+        -3.0000000000000004,
+        2.05,
+        2.05,
+        -2.8
+      ]
+    },
+    {
+      "name": "hour_hand",
+      "material": "blued steel",
+      "solid_count": 1,
+      "volume_mm3": 4.132048,
+      "bounds_mm": [
+        -1.75,
+        -18.0,
+        -3.35,
+        1.75,
+        1.7500000000000002,
+        -3.1499999999999995
+      ]
+    },
+    {
+      "name": "minute_hand",
+      "material": "blued steel",
+      "solid_count": 1,
+      "volume_mm3": 3.373449,
+      "bounds_mm": [
+        -1.35,
+        -23.5,
+        -3.75,
+        1.35,
+        1.35,
+        -3.549999999999999
+      ]
+    },
+    {
+      "name": "hand_retainer",
+      "material": "steel",
+      "solid_count": 1,
+      "volume_mm3": 0.138544,
+      "bounds_mm": [
+        -0.42,
+        -0.42,
+        -4.0,
+        0.42,
+        0.42,
+        -3.75
+      ]
+    },
+    {
+      "name": "bell_back_cover",
+      "material": "stamped steel",
+      "solid_count": 1,
+      "volume_mm3": 3803.598482,
+      "bounds_mm": [
+        -32.2,
+        -32.2,
+        0.6,
+        32.2,
+        32.2,
+        15.0
+      ]
+    },
+    {
+      "name": "train_bridge_screw_1",
+      "material": "steel slotted screw",
+      "solid_count": 1,
+      "volume_mm3": 4.176725,
+      "bounds_mm": [
+        -20.95,
+        14.05,
+        0.6,
+        -19.05,
+        15.95,
+        6.68
+      ]
+    },
+    {
+      "name": "train_bridge_screw_2",
+      "material": "steel slotted screw",
+      "solid_count": 1,
+      "volume_mm3": 4.176725,
+      "bounds_mm": [
+        -16.95,
+        2.05,
+        0.6,
+        -15.05,
+        3.95,
+        6.68
+      ]
+    },
+    {
+      "name": "train_bridge_screw_3",
+      "material": "steel slotted screw",
+      "solid_count": 1,
+      "volume_mm3": 4.176725,
+      "bounds_mm": [
+        -5.95,
+        17.05,
+        0.6,
+        -4.05,
+        18.95,
+        6.68
+      ]
+    },
+    {
+      "name": "train_bridge_screw_4",
+      "material": "steel slotted screw",
+      "solid_count": 1,
+      "volume_mm3": 4.176725,
+      "bounds_mm": [
+        6.05,
+        9.05,
+        0.6,
+        7.95,
+        10.95,
+        6.68
+      ]
+    },
+    {
+      "name": "train_bridge_screw_5",
+      "material": "steel slotted screw",
+      "solid_count": 1,
+      "volume_mm3": 4.176725,
+      "bounds_mm": [
+        -6.55,
+        -14.25,
+        0.6,
+        -4.6499999999999995,
+        -12.350000000000001,
+        6.68
+      ]
+    },
+    {
+      "name": "alarm_bridge_screw_1",
+      "material": "steel slotted screw",
+      "solid_count": 1,
+      "volume_mm3": 4.176725,
+      "bounds_mm": [
+        17.05,
+        18.05,
+        0.6,
+        18.95,
+        19.95,
+        6.68
+      ]
+    },
+    {
+      "name": "alarm_bridge_screw_2",
+      "material": "steel slotted screw",
+      "solid_count": 1,
+      "volume_mm3": 4.176725,
+      "bounds_mm": [
+        21.05,
+        6.05,
+        0.6,
+        22.95,
+        7.95,
+        6.68
+      ]
+    },
+    {
+      "name": "alarm_bridge_screw_3",
+      "material": "steel slotted screw",
+      "solid_count": 1,
+      "volume_mm3": 4.176725,
+      "bounds_mm": [
+        17.05,
+        -7.95,
+        0.6,
+        18.95,
+        -6.05,
+        6.68
+      ]
+    },
+    {
+      "name": "pallet_bridge_screw_1",
+      "material": "steel slotted screw",
+      "solid_count": 1,
+      "volume_mm3": 3.464594,
+      "bounds_mm": [
+        -0.7445533087000001,
+        -12.8836543978,
+        0.6,
+        0.8954466912999998,
+        -11.2436543978,
+        5.820000000000001
+      ]
+    },
+    {
+      "name": "pallet_bridge_screw_2",
+      "material": "steel slotted screw",
+      "solid_count": 1,
+      "volume_mm3": 3.464594,
+      "bounds_mm": [
+        -0.14455330870000005,
+        -18.2336543978,
+        0.6,
+        1.4954466912999997,
+        -16.593654397799998,
+        5.820000000000001
+      ]
+    },
+    {
+      "name": "balance_cock_screw_1",
+      "material": "steel slotted screw",
+      "solid_count": 1,
+      "volume_mm3": 5.443262,
+      "bounds_mm": [
+        -0.5245533087000004,
+        -15.063654397800002,
+        0.6,
+        1.2754466912999995,
+        -13.263654397800002,
+        8.940000000000001
+      ]
+    },
+    {
+      "name": "balance_cock_screw_2",
+      "material": "steel slotted screw",
+      "solid_count": 1,
+      "volume_mm3": 5.443262,
+      "bounds_mm": [
+        6.6754466912999995,
+        -25.163654397800002,
+        0.6,
+        8.4754466913,
+        -23.363654397800005,
+        8.940000000000001
+      ]
+    }
+  ]
+}

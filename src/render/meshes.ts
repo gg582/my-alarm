@@ -68,7 +68,15 @@ export function mainplateOutline(radius: number): [number, number][] {
 }
 
 export function alarmWheelPlateOutline(radius: number): [number, number][] {
-  return mainplateOutline(radius).map(([x, y]) => [x * 0.96, y * 0.96]);
+  const traced: [number, number][] = [
+    [544, 117], [580, 117], [615, 130], [648, 140], [680, 138], [712, 147],
+    [743, 168], [770, 199], [788, 236], [793, 275], [784, 315], [762, 351],
+    [728, 380], [690, 401], [648, 416], [610, 428], [575, 433], [540, 426],
+    [507, 410], [480, 388], [459, 357], [445, 322], [438, 285], [439, 246],
+    [449, 209], [469, 177], [493, 151], [521, 133],
+  ];
+  const scale = 0.82 * Math.sqrt(Math.PI * radius * radius / Math.abs(polygonArea(traced)));
+  return traced.map(([x, y]) => [(x - 610) * scale, (260 - y) * scale]);
 }
 
 function triangulateProfile(outline: [number, number][]): number[] {
@@ -567,22 +575,22 @@ export function alarmStopSpringMesh(z0 = 5.85, z1 = 6.15): MeshData {
     flatBarMesh(0, -5.0, 0.25, 5.8, 0.68, 0.55, z0, z1),
     flatBarMesh(0.25, 5.8, -0.35, 6.6, 0.55, 0.38, z0, z1),
     flatBarMesh(-0.35, 6.6, -0.85, 6.25, 0.38, 0.3, z0, z1),
+    transformedMesh(box(0.38, 0.65, 0.85), 0, -0.85, 6.25, z0 - 0.425),
   ]);
 }
 
 export function alarmGuardMesh(z0 = 4.0, z1 = 4.35): MeshData {
   const outline: [number, number][] = [
-    [1.0, 0.9], [0.4, 1.45], [-1.8, 1.25], [-4.8, 1.8], [-6.8, 2.65],
-    [-7.75, 2.8], [-8.35, 2.1], [-8.15, 1.15], [-7.2, 0.65],
-    [-5.0, 0.55], [-2.2, -0.25], [-0.6, -0.95], [0.75, -0.75], [1.2, 0],
+    [1.0, 0.9], [2.3, 1.3], [3.0, 0.8], [3.1, -0.1], [2.2, -0.7],
+    [0.8, -0.9], [-0.3, -2.0], [-1.0, -4.2], [-1.4, -6.1], [-2.0, -7.0],
+    [-3.0, -7.2], [-3.7, -6.6], [-3.5, -5.7], [-2.7, -4.5], [-1.9, -2.4],
+    [-1.2, -0.8], [-0.4, 0.5],
   ];
-  const stop = transformedMesh(extrudeProfile([
-    [-0.65, -0.75], [0.35, -0.65], [0.7, 0.45], [0.2, 1.1], [-0.5, 0.8],
-  ], z0 - 1.1, z1 + 0.45), -0.2, -7.15, 1.3, 0);
   return mergeMeshes([
     roundedPlateMesh(outline, z0, z1, 2),
-    ringMesh(1.05, 0.42, z0, z1, 32),
-    stop,
+    ringMesh(1.05, 0.36, z0, z1, 32),
+    transformedMesh(box(0.38, 1.60, 3.40), 0, -2.7, -6.4, z0 + 1.70),
+    transformedMesh(box(0.55, 0.70, 1.20), 0, -1.8, -5.0, z0 - 0.40),
   ]);
 }
 

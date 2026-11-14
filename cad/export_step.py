@@ -53,7 +53,7 @@ HAIRSPRING = {
 }
 TRAIN_SCREWS = [(-20.0, 15.0), (-16.0, 3.0), (-5.0, 18.0), (7.0, 10.0), (-5.6, -13.3)]
 ALARM_SCREWS = [(18.0, 19.0), (22.0, 7.0), (18.0, -7.0)]
-ALARM_WHEEL_PLATE_SCREWS = [(-18.0, 14.0), (20.0, 10.0), (0.0, -23.0)]
+ALARM_WHEEL_PLATE_SCREWS = [(-16.0, 12.0), (16.7, 7.4), (0.0, -22.0)]
 
 
 @dataclass
@@ -68,6 +68,53 @@ def polygon_area(points: list[Point]) -> float:
         x0 * y1 - x1 * y0
         for (x0, y0), (x1, y1) in zip(points, points[1:] + points[:1])
     )) / 2
+
+
+def rounded_outline(outline: list[Point], iterations: int = 2) -> list[Point]:
+    points = outline
+    for _ in range(iterations):
+        rounded = []
+        for index, (x0, y0) in enumerate(points):
+            x1, y1 = points[(index + 1) % len(points)]
+            rounded.append((x0 * 0.75 + x1 * 0.25, y0 * 0.75 + y1 * 0.25))
+            rounded.append((x0 * 0.25 + x1 * 0.75, y0 * 0.25 + y1 * 0.75))
+        points = rounded
+    return points
+
+
+def point_inside(point: Point, outline: list[Point]) -> bool:
+    x, y = point
+    inside = False
+    for (x0, y0), (x1, y1) in zip(outline, outline[1:] + outline[:1]):
+        if (y0 > y) != (y1 > y) and x < (x1 - x0) * (y - y0) / (y1 - y0) + x0:
+            inside = not inside
+    return inside
+
+
+def distance_to_edge(point: Point, start: Point, end: Point) -> float:
+    x, y = point
+    dx, dy = end[0] - start[0], end[1] - start[1]
+    length_squared = dx * dx + dy * dy
+    if length_squared < 1e-18:
+        return math.dist(point, start)
+    t = max(0.0, min(1.0, ((x - start[0]) * dx + (y - start[1]) * dy) / length_squared))
+    return math.hypot(x - start[0] - t * dx, y - start[1] - t * dy)
+
+
+def validate_plate_support(outline: list[Point], holes: list[Hole], minimum_web: float = 0.55) -> None:
+    for x, y, diameter in holes:
+        if not point_inside((x, y), outline):
+            raise RuntimeError(f"Unsupported hole outside plate at {(x, y)}")
+        edge_distance = min(
+            distance_to_edge((x, y), start, end)
+            for start, end in zip(outline, outline[1:] + outline[:1])
+        )
+        if edge_distance - diameter / 2 < minimum_web:
+            raise RuntimeError(f"Insufficient plate web at {(x, y)}: {edge_distance - diameter / 2:.3f} mm")
+    for index, (x0, y0, d0) in enumerate(holes):
+        for x1, y1, d1 in holes[index + 1:]:
+            if math.dist((x0, y0), (x1, y1)) < (d0 + d1) / 2 + minimum_web:
+                raise RuntimeError(f"Insufficient ligament between holes at {(x0, y0)} and {(x1, y1)}")
 
 
 def mainplate_outline() -> list[Point]:
@@ -85,7 +132,15 @@ def mainplate_outline() -> list[Point]:
 
 
 def alarm_wheel_plate_outline() -> list[Point]:
-    return [(x * 0.96, y * 0.96) for x, y in mainplate_outline()]
+    traced = [
+        (544, 117), (580, 117), (615, 130), (648, 140), (680, 138), (712, 147),
+        (743, 168), (770, 199), (788, 236), (793, 275), (784, 315), (762, 351),
+        (728, 380), (690, 401), (648, 416), (610, 428), (575, 433), (540, 426),
+        (507, 410), (480, 388), (459, 357), (445, 322), (438, 285), (439, 246),
+        (449, 209), (469, 177), (493, 151), (521, 133),
+    ]
+    scale = 0.82 * math.sqrt(math.pi * (CALIBER_MM / 2) ** 2 / polygon_area(traced))
+    return [((x - 610) * scale, (260 - y) * scale) for x, y in traced]
 
 
 def cylinder(radius: float, z0: float, z1: float, xy: Point = (0, 0)) -> cq.Workplane:
@@ -217,7 +272,9 @@ def dial_side_screw(xy: Point) -> cq.Workplane:
 
 
 def perforated_plate(outline: list[Point], holes: list[Hole], z0: float, z1: float) -> cq.Workplane:
-    return drill(prism(outline, z0, z1), holes, z0, z1)
+    supported = rounded_outline(outline)
+    validate_plate_support(supported, holes)
+    return drill(prism(supported, z0, z1), holes, z0, z1)
 
 
 def make_pallet() -> cq.Workplane:
@@ -320,14 +377,16 @@ def build() -> tuple[dict[str, Part], dict[str, cq.Workplane]]:
         (0, 0, 1.80), (-4.6, 2.4, 0.56), (7.6, 3.2, 0.56), (7.2, 7.8, 0.68),
         *[(x, y, 0.86) for x, y in ALARM_WHEEL_PLATE_SCREWS],
     ], -1.30, -1.10)
+    if any(not point_inside(point, outline) for point in rounded_outline(alarm_wheel_plate_outline())):
+        raise RuntimeError("Alarm wheel plate overhangs the mainplate")
     plates["alarm-wheel-plate"] = alarm_wheel_plate
     add("alarm_wheel_plate", alarm_wheel_plate, "CuZn37 nickel plated", nickel)
 
     train_outline = [
-        (-24.5, 12), (-23.5, 19), (-18, 23), (-10, 24), (-3, 22), (4, 18),
-        (10, 13), (12.5, 8), (10.5, 4.2), (5, 3.4), (2, 1), (2, -4),
-        (1.5, -7), (0, -10), (-2, -13), (-4, -15.5), (-6.5, -16), (-9, -14),
-        (-11, -10), (-12, -6), (-15, -1), (-21, 3), (-24, 7),
+        (-24, 11), (-23, 17), (-19, 22), (-12, 24), (-6, 23), (-2, 20),
+        (3, 19), (8, 16), (11, 12), (13.5, 9), (13.5, 6), (11.5, 3), (8, 1),
+        (5, 0), (3, -4), (2, -8), (0, -12), (-3, -15.5), (-6, -17),
+        (-9, -15), (-10.5, -11), (-12, -7), (-15, -3), (-20, 1), (-23, 6),
     ]
     train_holes = [
         (*POS["barrel"], 1.50), (*POS["center"], 1.10), (*POS["third"], 0.42), (*POS["fourth"], 0.42),
@@ -339,10 +398,10 @@ def build() -> tuple[dict[str, Part], dict[str, cq.Workplane]]:
     add("train_bridge", train_bridge, "CuZn37 nickel plated", nickel)
 
     alarm_outline = [
-        (10, 22), (18, 23), (24, 18), (26, 10), (25, 5), (22, 3),
-        (20, 5), (20, 9), (18, 12), (17, 10), (18, 5), (20, 1),
-        (22, -4), (22, -8), (18, -12), (14, -10), (11.5, -7), (12, -4),
-        (16, 3), (13, 10), (9, 15),
+        (8, 13), (8.5, 18), (11, 22), (15, 24), (19, 23), (21.5, 21), (22.5, 18),
+        (21, 15), (18.5, 13), (17.5, 10), (18.5, 8), (20, 9), (23, 8.5),
+        (24.5, 6), (25, 2), (25, -4), (23, -8), (20, -11), (17, -12.5),
+        (14, -11), (12, -8), (11, -4), (10, 0), (8.5, 5),
     ]
     alarm_bridge = perforated_plate(alarm_outline, [
         (*POS["alarm_barrel"], 1.50), (*POS["saw"], 0.48), (*POS["hammer"], 0.72),
@@ -353,9 +412,9 @@ def build() -> tuple[dict[str, Part], dict[str, cq.Workplane]]:
 
     fork_x, fork_y = POS["fork"]
     pallet_local = [
-        (-3.0, 2.6), (-2.75, 3.45), (-1.9, 3.8), (-1.0, 3.45), (-0.25, 2.55),
+        (-3.5, 2.6), (-3.0, 4.10), (-1.9, 4.40), (-0.8, 4.00), (-0.1, 2.55),
         (0.8, 1.45), (1.35, 0.65), (1.4, -0.2), (0.85, -0.95), (-0.1, -1.55),
-        (-0.85, -3.2), (-1.45, -4.0), (-2.35, -3.55), (-2.8, -2.2), (-2.65, -0.65),
+        (-0.65, -3.7), (-1.45, -4.8), (-2.60, -4.0), (-3.0, -2.2), (-2.65, -0.65),
         (-2.9, 0.85),
     ]
     pallet_bridge = perforated_plate([(x + fork_x, y + fork_y) for x, y in pallet_local], [
@@ -501,11 +560,19 @@ def build() -> tuple[dict[str, Part], dict[str, cq.Workplane]]:
 
     guard_xy = (19.5, -2.5)
     guard_outline = [
-        (1.0, 0.9), (0.4, 1.45), (-1.8, 1.25), (-4.8, 1.8), (-6.8, 2.65),
-        (-7.75, 2.8), (-8.35, 2.1), (-8.15, 1.15), (-7.2, 0.65),
-        (-5.0, 0.55), (-2.2, -0.25), (-0.6, -0.95), (0.75, -0.75), (1.2, 0),
+        (1.0, 0.9), (2.3, 1.3), (3.0, 0.8), (3.1, -0.1), (2.2, -0.7),
+        (0.8, -0.9), (-0.3, -2.0), (-1.0, -4.2), (-1.4, -6.1), (-2.0, -7.0),
+        (-3.0, -7.2), (-3.7, -6.6), (-3.5, -5.7), (-2.7, -4.5), (-1.9, -2.4),
+        (-1.2, -0.8), (-0.4, 0.5),
     ]
-    add("alarm_shutoff_guard", perforated_plate([(x + guard_xy[0], y + guard_xy[1]) for x, y in guard_outline], [(*guard_xy, 0.72)], 4.0, 4.35), "steel", steel)
+    guard_plate = perforated_plate(
+        [(x + guard_xy[0], y + guard_xy[1]) for x, y in guard_outline], [], 4.0, 4.35,
+    )
+    guard_boss = ring(1.05, 0.36, 4.0, 4.35, guard_xy)
+    guard_upright = box((0.38, 1.60, 3.40), (guard_xy[0] - 2.7, guard_xy[1] - 6.4), 5.70)
+    guard_pawl = box((0.55, 0.70, 1.20), (guard_xy[0] - 1.8, guard_xy[1] - 5.0), 3.60)
+    guard = fuse([guard_plate, guard_boss, guard_upright, guard_pawl])
+    add("alarm_shutoff_guard", guard.cut(cylinder(0.36, 3.9, 4.45, guard_xy)), "steel", steel)
     add("alarm_guard_arbor", cylinder(0.35, 0.2, 5.0, guard_xy), "steel", steel)
 
     hammer_xy = POS["hammer"]
@@ -540,7 +607,11 @@ def build() -> tuple[dict[str, Part], dict[str, cq.Workplane]]:
     stop_spring = fuse([
         bar((stop_xy[0], stop_xy[1] - 5.0), (stop_xy[0] + 0.25, stop_xy[1] + 5.8), 0.68, 0.55, -2.35, -2.05),
         bar((stop_xy[0] + 0.25, stop_xy[1] + 5.8), (stop_xy[0] - 0.35, stop_xy[1] + 6.6), 0.55, 0.38, -2.35, -2.05),
+        bar((stop_xy[0] - 0.35, stop_xy[1] + 6.6), (stop_xy[0] - 0.85, stop_xy[1] + 6.25), 0.38, 0.30, -2.35, -2.05),
+        box((0.38, 0.65, 0.85), (stop_xy[0] - 0.85, stop_xy[1] + 6.25), -1.925),
     ])
+    stop_spring = stop_spring.cut(box((0.24, 1.80, 0.50), (stop_xy[0] + 0.02, stop_xy[1] - 2.8), -2.20))
+    stop_spring = stop_spring.cut(box((0.24, 1.25, 0.50), (stop_xy[0] + 0.10, stop_xy[1] - 0.7), -2.20))
     add("alarm_stop_spring", stop_spring, "spring steel", steel)
     add("alarm_release_link", bar((10.35, 0.2), (17.1, -3.1), 0.38, 0.30, 1.15, 4.15), "steel", steel)
 

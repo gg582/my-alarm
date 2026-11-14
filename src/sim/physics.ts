@@ -14,10 +14,10 @@
  * · Going train ratios enforced rigidly from SPEC (center:escape = 600:1).
  * · Independent barrels with non-linear torque curves; alarm barrel models the verified
  *   friction slipping bridle (winding clamps at full turns instead of breaking).
- * · Alarm: the hour-wheel lug enters the alarm-wheel slot within the release window,
- *   while a separate centered release phase starts the hammer at the indicated time;
- *   the hammer-fork saw wheel then oscillates the hammer against the bell at the strike
- *   rate, emitting discrete strike events with contact velocity and hammer-lift damping.
+ * · Alarm: spring 20 preloads the hour wheel and its bent end retains the hammer stem;
+ *   full seating of the hour-wheel tab in the alarm-wheel slot lifts spring 20 and
+ *   releases the hammer. A separate button inserts the stop stem between saw-wheel
+ *   teeth. The two locks react barrel torque independently of the striking motion.
  */
 
 import { SPEC } from './specs';
@@ -57,6 +57,12 @@ export interface SimSnapshot {
 
   alarmEnabled: boolean;
   alarmRinging: boolean;
+  alarmLocked: boolean;
+  alarmLockLoad: number;     // normalized saw-wheel torque reacted by the active lock
+  hammerStemReleased: boolean;
+  manualStopEngaged: boolean;
+  stopStemInsertion: number; // 0..1 button-driven saw-wheel stop travel
+  stopSpringDeflection: number; // 0..1 spring-20 lift from the mainplate
   hourWheelDrop: number;     // 0..1 axial drop animation
   hammerAngle: number;       // rad
   hammerResting: boolean;
@@ -104,10 +110,15 @@ export class Slava5671Physics {
   // ---- alarm ----
   alarmEnabled = true;
   private ringing = false;
+  private locked = true;
+  private lockLoad = 0;
+  private hammerReleased = false;
+  private manualStop = false;
+  private stopStem = 0;
   private hourDrop = 0;
-  private hammerPhase = 0;
+  private hammerPhase = Math.asin(-0.42 / 0.62);
   private hammerRestTimer = 0;
-  private hammerAngle = 0;
+  private hammerAngle = -0.42;
   private hammerResting = false;
   private alarmWheelAngle = 0;
 
@@ -142,7 +153,6 @@ export class Slava5671Physics {
 
   setAlarmEnabled(on: boolean) {
     this.alarmEnabled = on;
-    if (!on && this.ringing) this.stopRinging();
   }
 
   /** advance exactly one half-oscillation (for the Step button) */
@@ -247,22 +257,26 @@ export class Slava5671Physics {
     let diff = (hourAngle - alarmAngle) % TAU;
     if (diff > Math.PI) diff -= TAU;
     if (diff < -Math.PI) diff += TAU;
-    const inSlot = Math.abs(diff) < SPEC.alarmSlotHalfWidthRad;
-    const releaseReached = diff >= 0 && diff < SPEC.alarmSlotHalfWidthRad;
+    const stopTarget = this.alarmEnabled ? 0 : 1;
+    const stopRate = dt / 0.08;
+    this.stopStem += Math.sign(stopTarget - this.stopStem) * Math.min(Math.abs(stopTarget - this.stopStem), stopRate);
+    this.manualStop = this.stopStem >= 0.80;
 
-    if (inSlot && releaseReached && this.alarmEnabled && !this.ringing && this.alarmTurns > 0.02) {
+    const inSlot = diff >= 0 && diff < 2 * SPEC.alarmSlotHalfWidthRad;
+    const dropTarget = inSlot ? 1 : 0;
+    const dropRate = dt / (inSlot ? 0.15 : 0.22);
+    this.hourDrop += Math.sign(dropTarget - this.hourDrop) * Math.min(Math.abs(dropTarget - this.hourDrop), dropRate);
+    this.hammerReleased = inSlot && this.hourDrop >= 0.98;
+
+    if (!inSlot && this.hourDrop < 0.2 && this.ringing) this.stopRinging();
+    if (this.ringing && (this.alarmTurns <= 1e-4 || this.manualStop)) this.stopRinging();
+    if (this.hammerReleased && !this.manualStop && !this.ringing && this.alarmTurns > 0.02) {
       this.ringing = true;
+      this.hammerPhase = Math.asin(-0.42 / 0.62);
       this.events.push({ type: 'alarmStart', value: 1 });
     }
-    if (!inSlot && this.hourDrop > 0.99) {
-      // hour wheel rotated past the slot: axial spring lifts it back, hammer re-cocks
-      this.hourDrop = 0;
-      if (this.ringing) this.stopRinging();
-    }
-    if (this.ringing && (this.alarmTurns <= 1e-4 || !this.alarmEnabled)) {
-      this.stopRinging();
-    }
-    if (this.ringing) this.hourDrop = Math.min(1, this.hourDrop + dt / 0.15);
+    this.locked = !this.ringing && (this.manualStop || !this.hammerReleased);
+    this.lockLoad = this.locked ? this.alarmTorque() * (SPEC.alarmBarrel.wheelTeeth / SPEC.alarmBarrel.pinion) : 0;
 
     // ---- striking train: hammer-fork saw wheel → hammer oscillation ----
     if (this.ringing) {
@@ -292,9 +306,9 @@ export class Slava5671Physics {
         }
       }
     } else {
-      this.hammerAngle *= 1 - Math.min(1, dt / 0.1);
+      if (!this.manualStop && !this.hammerReleased) this.hammerAngle = -0.42;
+      else if (!this.manualStop) this.hammerAngle *= 1 - Math.min(1, dt / 0.1);
       this.hammerResting = false;
-      this.alarmWheelAngle += 0;
     }
 
     this.simTime += dt;
@@ -350,6 +364,12 @@ export class Slava5671Physics {
       alarmBarrelTorque: this.alarmTorque(),
       alarmEnabled: this.alarmEnabled,
       alarmRinging: this.ringing,
+      alarmLocked: this.locked,
+      alarmLockLoad: this.lockLoad,
+      hammerStemReleased: this.hammerReleased,
+      manualStopEngaged: this.manualStop,
+      stopStemInsertion: this.stopStem,
+      stopSpringDeflection: this.hourDrop,
       hourWheelDrop: this.hourDrop,
       hammerAngle: this.hammerAngle,
       hammerResting: this.hammerResting,

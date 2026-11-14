@@ -25,7 +25,7 @@ The exporter writes native OpenCascade B-rep solids, not triangulated render mes
 - `cad/output/hairspring-stud.step`: slotted outer stud with a 0.18 mm retaining pin.
 - `cad/output/manifest.json`: dimensions, materials, part bounds, volumes, and solid counts.
 
-The command reimports every STEP file, checks solid validity, verifies the 19.000 mm overall height, checks the train center distances, and confirms the cylindrical jewel-seat diameters in the exported plates. The hairspring and both fittings must each reimport as exactly one valid solid; the spring is also checked for its 0.08 mm stock thickness and 0.20 mm outer eye.
+The command reimports every STEP file, checks solid validity, verifies the 19.000 mm overall height, checks the train center distances, and confirms the cylindrical jewel-seat diameters in the exported plates. Plate holes must remain inside their supporting outlines with at least 0.55 mm of radial edge web and 0.55 mm ligaments between holes; the alarm wheel plate must also remain entirely inside the mainplate outline. This is geometric support screening, not a stress analysis. The hairspring and both fittings must each reimport as exactly one valid solid; the spring is also checked for its 0.08 mm stock thickness and 0.20 mm outer eye.
 
 ## Dimensions and fit
 

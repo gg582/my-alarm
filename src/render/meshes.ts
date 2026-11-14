@@ -524,13 +524,31 @@ export function palletForkMesh(z0 = 3.0, z1 = 3.35): MeshData {
   ]);
 }
 
-export function palletStonesMesh(z0 = 2.85, z1 = 3.45): MeshData {
+export function palletStonesMesh(z0 = 2.05, z1 = 3.45): MeshData {
   const stone = extrudeProfile([
-    [-0.34, -0.72], [0.3, -0.66], [0.4, 0.68], [-0.25, 0.78],
+    [-0.3, -0.72], [0.28, -0.72], [0.34, 0.62], [0.22, 0.76], [-0.28, 0.72],
   ], z0, z1);
   return mergeMeshes([
-    transformedMesh(stone, -0.35, -1.2, 2.3, 0),
-    transformedMesh(stone, 1.1, -2.6, 0, 0),
+    transformedMesh(stone, -0.2284, -1.2, 2.3, 0),
+    transformedMesh(stone, -0.8491, -2.6, 0, 0),
+  ]);
+}
+
+export function alarmWheelOutline(teeth: number, radius: number): [number, number][] {
+  return gearOutline(teeth, radius, 0.4).map(([x, y]) => {
+    const angle = Math.atan2(y, x);
+    const distance = Math.abs(Math.atan2(Math.sin(angle + Math.PI / 2), Math.cos(angle + Math.PI / 2)));
+    if (distance > 0.075) return [x, y];
+    const scale = (radius - 1.05) / Math.hypot(x, y);
+    return [x * scale, y * scale];
+  });
+}
+
+export function alarmStopSpringMesh(z0 = 5.85, z1 = 6.15): MeshData {
+  return mergeMeshes([
+    flatBarMesh(0, -5.0, 0.25, 5.8, 0.68, 0.55, z0, z1),
+    flatBarMesh(0.25, 5.8, -0.35, 6.6, 0.55, 0.38, z0, z1),
+    flatBarMesh(-0.35, 6.6, -0.85, 6.25, 0.38, 0.3, z0, z1),
   ]);
 }
 
@@ -555,6 +573,10 @@ export function hammerForkMesh(z0 = 2.8, z1 = 3.35): MeshData {
   for (let i = 0; i <= 20; i++) {
     const angle = (i / 20) * Math.PI;
     outline.push([Math.cos(angle) * 1.65, Math.sin(angle) * 1.65]);
+  }
+  for (let i = 20; i >= 0; i--) {
+    const angle = (i / 20) * Math.PI;
+    outline.push([Math.cos(angle) * 1.08, Math.sin(angle) * 1.08]);
   }
   return plateMesh(outline, z0, z1);
 }

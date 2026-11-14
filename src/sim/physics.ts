@@ -14,11 +14,10 @@
  * · Going train ratios enforced rigidly from SPEC (center:escape = 600:1).
  * · Independent barrels with non-linear torque curves; alarm barrel models the verified
  *   friction slipping bridle (winding clamps at full turns instead of breaking).
- * · Alarm: hour-wheel lug under axial spring tension drops into the alarm-wheel slot when
- *   the (wrapped) angle between current time and alarm time enters the slot window
- *   (±5 min, per the 1987 repair manual), releasing the hammer; the hammer-fork saw wheel
- *   then oscillates the hammer against the bell at the strike rate, emitting discrete
- *   strike events with contact velocity — hammer "rest" intervals model lift damping.
+ * · Alarm: the hour-wheel lug enters the alarm-wheel slot within the release window,
+ *   while a separate centered release phase starts the hammer at the indicated time;
+ *   the hammer-fork saw wheel then oscillates the hammer against the bell at the strike
+ *   rate, emitting discrete strike events with contact velocity and hammer-lift damping.
  */
 
 import { SPEC } from './specs';
@@ -76,7 +75,7 @@ export class Slava5671Physics {
   private theta = 0.35;         // balance angle (starts with kick)
   private omega = 0;            // balance angular velocity
   private readonly I = SPEC.balanceInertia;
-  private readonly k = SPEC.balanceInertia * Math.pow(TAU / SPEC.balancePeriod, 2);
+  private readonly k = SPEC.balanceInertia * Math.pow(TAU / SPEC.balancePeriod, 2) * SPEC.rateCalibration;
   // Q ≈ 120 for the balance assembly → viscous damping coefficient below
   private readonly c = (SPEC.balanceInertia * (TAU / SPEC.balancePeriod)) / 120;
 
@@ -249,8 +248,9 @@ export class Slava5671Physics {
     if (diff > Math.PI) diff -= TAU;
     if (diff < -Math.PI) diff += TAU;
     const inSlot = Math.abs(diff) < SPEC.alarmSlotHalfWidthRad;
+    const releaseReached = diff >= 0 && diff < SPEC.alarmSlotHalfWidthRad;
 
-    if (inSlot && this.alarmEnabled && !this.ringing && this.alarmTurns > 0.02) {
+    if (inSlot && releaseReached && this.alarmEnabled && !this.ringing && this.alarmTurns > 0.02) {
       this.ringing = true;
       this.events.push({ type: 'alarmStart', value: 1 });
     }

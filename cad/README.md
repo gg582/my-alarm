@@ -19,6 +19,7 @@ The exporter writes native OpenCascade B-rep solids, not triangulated render mes
 - `cad/output/pallet-bridge.step`
 - `cad/output/balance-cock.step`
 - `cad/output/alarm-bridge.step`
+- `cad/output/alarm-wheel-plate.step`: dial-side alarm wheel plate with the central bushing bore, motion-work arbor holes, and three mounting-screw holes.
 - `cad/output/hairspring.step`: one continuous flat spring with inner terminal and pierced outer stud eye.
 - `cad/output/hairspring-collet.step`: split staff collet with a 0.20 mm terminal slot.
 - `cad/output/hairspring-stud.step`: slotted outer stud with a 0.18 mm retaining pin.

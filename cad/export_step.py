@@ -53,6 +53,7 @@ HAIRSPRING = {
 }
 TRAIN_SCREWS = [(-20.0, 15.0), (-16.0, 3.0), (-5.0, 18.0), (7.0, 10.0), (-5.6, -13.3)]
 ALARM_SCREWS = [(18.0, 19.0), (22.0, 7.0), (18.0, -7.0)]
+ALARM_WHEEL_PLATE_SCREWS = [(-18.0, 14.0), (20.0, 10.0), (0.0, -23.0)]
 
 
 @dataclass
@@ -81,6 +82,10 @@ def mainplate_outline() -> list[Point]:
     ]
     scale = math.sqrt(math.pi * (CALIBER_MM / 2) ** 2 / polygon_area(traced))
     return [((x - 208) * scale, (199 - y) * scale) for x, y in traced]
+
+
+def alarm_wheel_plate_outline() -> list[Point]:
+    return [(x * 0.96, y * 0.96) for x, y in mainplate_outline()]
 
 
 def cylinder(radius: float, z0: float, z1: float, xy: Point = (0, 0)) -> cq.Workplane:
@@ -203,6 +208,14 @@ def screw(xy: Point, shaft_z0: float, head_z0: float, head_z1: float, radius: fl
     return shape.cut(slot)
 
 
+def dial_side_screw(xy: Point) -> cq.Workplane:
+    shape = fuse([
+        cylinder(0.43, -1.30, 0.60, xy),
+        cylinder(0.82, -1.50, -1.30, xy),
+    ])
+    return shape.cut(box((1.35, 0.20, 0.16), xy, -1.48, 0.35))
+
+
 def perforated_plate(outline: list[Point], holes: list[Hole], z0: float, z1: float) -> cq.Workplane:
     return drill(prism(outline, z0, z1), holes, z0, z1)
 
@@ -296,12 +309,19 @@ def build() -> tuple[dict[str, Part], dict[str, cq.Workplane]]:
         (*POS["barrel"], 1.50), (*POS["center"], 1.10), (*POS["third"], 0.42),
         (*POS["fourth"], 0.42), (*POS["alarm_barrel"], 1.50), (*POS["saw"], 0.48),
         (*POS["hammer"], 0.72), (7.2, 7.8, 0.42), (-4.6, 2.4, 0.36),
-        *[(x, y, 0.86) for x, y in TRAIN_SCREWS + ALARM_SCREWS],
+        *[(x, y, 0.86) for x, y in TRAIN_SCREWS + ALARM_SCREWS + ALARM_WHEEL_PLATE_SCREWS],
         *[(POS[key][0], POS[key][1], data["outside"] - PRESS_INTERFERENCE_MM) for key, data in JEWELS.items()],
     ]
     mainplate = drill(mainplate, mainplate_holes, 0, 1.2)
     plates["mainplate"] = mainplate
     add("mainplate", mainplate, "CuZn37 nickel plated", nickel)
+
+    alarm_wheel_plate = perforated_plate(alarm_wheel_plate_outline(), [
+        (0, 0, 1.80), (-4.6, 2.4, 0.56), (7.6, 3.2, 0.56), (7.2, 7.8, 0.68),
+        *[(x, y, 0.86) for x, y in ALARM_WHEEL_PLATE_SCREWS],
+    ], -1.30, -1.10)
+    plates["alarm-wheel-plate"] = alarm_wheel_plate
+    add("alarm_wheel_plate", alarm_wheel_plate, "CuZn37 nickel plated", nickel)
 
     train_outline = [
         (-24.5, 12), (-23.5, 19), (-18, 23), (-10, 24), (-3, 22), (4, 18),
@@ -501,17 +521,18 @@ def build() -> tuple[dict[str, Part], dict[str, cq.Workplane]]:
     add("hammer_head", cylinder(1.6, 2.8, 5.2, (hammer_xy[0] + 10.0, hammer_xy[1] - 3.2)), "steel", steel)
     add("hammer_staff", cylinder(0.35, 0.2, 5.0, hammer_xy), "steel", steel)
 
-    hour_wheel = ring(8.23, 0.80, -1.65, -0.80)
-    hour_tab = box((1.2, 1.2, 0.85), (0, -7.6), -1.25)
+    hour_wheel = ring(8.23, 0.80, -1.05, -0.35)
+    hour_tab = box((1.2, 1.2, 0.70), (0, -7.6), -0.70)
     add("hour_wheel", fuse([hour_wheel, hour_tab]), "CuZn37", brass)
     alarm_wheel = local(prism(gear_outline(72, 7.2, 0.4), -2.15, -1.35), POS["center"])
-    alarm_wheel = alarm_wheel.cut(cylinder(0.55, -2.25, -1.25))
+    alarm_wheel = alarm_wheel.cut(cylinder(0.82, -2.25, -1.25))
     notch = box((2.1, 2.2, 1.0), (0, -6.8), -1.75)
     add("alarm_wheel", alarm_wheel.cut(notch), "CuZn37", brass)
+    add("alarm_wheel_bushing", ring(0.82, 0.50, -2.25, -1.05), "CuZn37", brass)
     add("cannon_pinion", ring(1.82, 0.46, -2.40, -1.60), "CuZn37", brass)
     minute_xy = (-4.6, 2.4)
     add("minute_wheel", local(prism(gear_outline(36, 3.4, 0.35), -2.30, -1.75), minute_xy).cut(cylinder(0.18, -2.4, -1.65, minute_xy)), "CuZn37", brass)
-    add("minute_wheel_pinion", local(prism(gear_outline(8, 1.1, 0.49), -1.75, -1.0), minute_xy), "steel", steel)
+    add("minute_wheel_pinion", local(prism(gear_outline(8, 1.1, 0.49), -1.10, -0.35), minute_xy), "steel", steel)
     alarm_idler = (7.6, 3.2)
     add("alarm_idler", local(prism(gear_outline(30, 3.0, 0.35), -2.2, -1.65), alarm_idler).cut(cylinder(0.18, -2.3, -1.55, alarm_idler)), "CuZn37", brass)
     add("alarm_setting_pinion", local(prism(gear_outline(12, 1.4, 0.63), -2.0, -1.45), (7.2, 7.8)), "CuZn37", brass)
@@ -541,6 +562,8 @@ def build() -> tuple[dict[str, Part], dict[str, cq.Workplane]]:
         add(f"train_bridge_screw_{index + 1}", screw(xy, 0.6, 6.38, 6.68), "steel slotted screw", steel)
     for index, xy in enumerate(ALARM_SCREWS):
         add(f"alarm_bridge_screw_{index + 1}", screw(xy, 0.6, 6.38, 6.68), "steel slotted screw", steel)
+    for index, xy in enumerate(ALARM_WHEEL_PLATE_SCREWS):
+        add(f"alarm_wheel_plate_screw_{index + 1}", dial_side_screw(xy), "steel slotted screw", steel)
     for index, xy in enumerate([(fork_x - 2.0, fork_y + 2.8), (fork_x - 1.4, fork_y - 2.55)]):
         add(f"pallet_bridge_screw_{index + 1}", screw(xy, 0.6, 5.52, 5.82, 0.82), "steel slotted screw", steel)
     for index, xy in enumerate([(balance_x - 6.2, balance_y + 3.7), (balance_x + 1.0, balance_y - 6.4)]):
@@ -594,6 +617,7 @@ def export() -> None:
         "pallet-bridge": [JEWELS["fork"]["outside"] - PRESS_INTERFERENCE_MM],
         "balance-cock": [JEWELS["balance"]["outside"] - PRESS_INTERFERENCE_MM],
         "alarm-bridge": [],
+        "alarm-wheel-plate": [],
     }
     for name, shape in plates.items():
         path = OUTPUT_DIR / f"{name}.step"

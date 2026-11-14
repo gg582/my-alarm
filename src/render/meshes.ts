@@ -53,6 +53,24 @@ function polygonArea(outline: [number, number][]): number {
   return area * 0.5;
 }
 
+export function mainplateOutline(radius: number): [number, number][] {
+  const traced: [number, number][] = [
+    [157, 26], [174, 20], [198, 21], [222, 25], [242, 37], [250, 46],
+    [253, 71], [263, 82], [277, 98], [307, 96], [326, 99], [338, 108],
+    [345, 126], [348, 147], [365, 176], [374, 209], [379, 246], [375, 278],
+    [362, 310], [342, 333], [314, 351], [281, 362], [240, 370], [204, 372],
+    [174, 368], [143, 359], [111, 345], [87, 328], [69, 307], [49, 277],
+    [38, 245], [36, 210], [40, 176], [48, 144], [60, 113], [78, 87],
+    [99, 64], [126, 43],
+  ];
+  const scale = Math.sqrt(Math.PI * radius * radius / Math.abs(polygonArea(traced)));
+  return traced.map(([x, y]) => [(x - 208) * scale, (199 - y) * scale]);
+}
+
+export function alarmWheelPlateOutline(radius: number): [number, number][] {
+  return mainplateOutline(radius).map(([x, y]) => [x * 0.96, y * 0.96]);
+}
+
 function triangulateProfile(outline: [number, number][]): number[] {
   const remaining = outline.map((_, i) => i);
   const triangles: number[] = [];

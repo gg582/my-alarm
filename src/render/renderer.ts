@@ -19,7 +19,7 @@ import {
   spokedGearMesh, hourHandMesh, minuteHandMesh, alarmHandMesh,
   flatBarMesh, palletForkMesh, palletStonesMesh, balanceCockMesh,
   alarmGuardMesh, hammerForkMesh, perforatedPlateMesh, ringMesh,
-  alarmWheelOutline, alarmStopSpringMesh,
+  alarmWheelOutline, alarmStopSpringMesh, mainplateOutline, alarmWheelPlateOutline, plateMesh,
 } from './meshes';
 import type { MeshData } from './meshes';
 import type { SimSnapshot, SimEvent } from '../sim/physics';
@@ -488,19 +488,19 @@ export class Slava5671Renderer {
     bell.emissive = [0, 0, 0];
 
     // ---------- mainplate (55.8 mm reduced caliber) ----------
-    this.addObject(disc(SPEC.mainplateRadius, -1.2, 1.2, 96), MAT.nickelPlate, [0, 0, 0]);
+    this.addObject(plateMesh(mainplateOutline(SPEC.mainplateRadius), -1.2, 1.2), MAT.nickelPlate, [0, 0, 0]);
 
     // ---------- gear positions (wheel-pinion centre distances from pitch radii) ----------
     const POS = {
-      barrel: [-13, 12] as const,
+      barrel: [-11.8303354585, 10.9203096540] as const,
       center: [0, 0] as const,
-      third: [9, 5] as const,
-      fourth: [-1, -5] as const,
-      escape: [-4.5, -12.5] as const,
-      fork: [1, -15.8] as const,
-      balance: [5.5, -18.8] as const,
+      third: [9.1786513993, 5.0992507774] as const,
+      fourth: [0.1276846001, -3.9517160218] as const,
+      escape: [-3.4245533087, -11.5636543978] as const,
+      fork: [2.0754466913, -14.8636543978] as const,
+      balance: [6.5754466913, -17.8636543978] as const,
       alarmBarrel: [15, 9] as const,
-      saw: [13, -5] as const,
+      saw: [13.0342431483, -4.7602979619] as const,
       hammer: [17, -9] as const,
     };
 
@@ -663,6 +663,21 @@ export class Slava5671Renderer {
     }
     this.addObject(ringMesh(0.82, 0.48, bridgeZ + 1.08, bridgeZ + 1.24, 32), MAT.steelSatin, [POS.escape[0], POS.escape[1], 0]);
     this.addObject(ringMesh(0.47, 0.16, bridgeZ + 1.11, bridgeZ + 1.27, 32), MAT.ruby, [POS.escape[0], POS.escape[1], 0]);
+
+    // ---------- dial-side alarm wheel plate and its three mounting screws ----------
+    const alarmPlateScrews = [[-18, 14], [20, 10], [0, -23]] as const;
+    this.addObject(perforatedPlateMesh(alarmWheelPlateOutline(SPEC.mainplateRadius), [
+      { x: 0, y: 0, radius: 0.90 },
+      { x: -4.6, y: 2.4, radius: 0.28 },
+      { x: 7.6, y: 3.2, radius: 0.28 },
+      { x: 7.2, y: 7.8, radius: 0.34 },
+      ...alarmPlateScrews.map(([x, y]) => ({ x, y, radius: 0.43 })),
+    ], 4.4, 4.6), MAT.nickelPlate, [0, 0, 0]);
+    this.addObject(ringMesh(0.82, 0.50, 4.55, 5.65, 32), MAT.brass, [0, 0, 0]);
+    for (const [x, y] of alarmPlateScrews) {
+      this.addObject(disc(0.82, 4.60, 4.90, 32), MAT.steel, [x, y, 0]);
+      this.addObject(box(1.12, 0.18, 0.08), MAT.dark, [x, y, 0], () => [0.35, 0], [0, 0, 4.92]);
+    }
 
     // ---------- motion works and alarm setting train on the dial side ----------
     const hourAnim = (s: SimSnapshot): [number, number] => [-s.hourHandAngle, -s.hourWheelDrop * SPEC.hourWheelAxialDrop];

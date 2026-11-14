@@ -36,6 +36,7 @@ export const SPEC = {
   beatsPerSecond: 5,
   balanceAmplitudeRad: (270 * Math.PI) / 180,
   balanceInertia: 1.0,
+  rateCalibration: 1.0005,
 
   escapeWheelTeeth: 15,
   escapeWheelRevSeconds: 15 * 0.4,
